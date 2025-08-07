@@ -1,0 +1,17 @@
+/node_modules
+/.git
+/.nyc_output
+/data/db
+/public/uploads/*
+/logs/*.log
+.env*
+!.env.test
+.flaskenv*
+!.env.project
+!.env.vault
+!.env.example
+!/public/uploads/.gitkeep
+*.db
+.DS_Store
+createToken.js
+recruiter_company_owner.js

@@ -1,0 +1,80 @@
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+
+name: Node.js CI
+
+on:
+  push:
+    branches: [ "main", "release/*", "develop" ]
+  pull_request:
+    branches: [ "main", "release/*", "develop" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+    - name: Checkout repo code
+      uses: actions/checkout@v3
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - name: Install npm dependencies
+      run: npm install
+    - name: Run linter
+      run: npm run lint:check
+    - name: Generate Prisma
+      run: npm run prisma:generate
+    - name: Run unit tests
+      run: npm run test:unit
+    # - name: Run integration tests
+    #   run: npm run test:integration
+  deploy-staging:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    needs: test
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run build task
+      run: npm run build --if-present
+    - name: Deploy to staging server
+      uses: easingthemes/ssh-deploy@main
+      with:
+        SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+        ARGS: '-rlgoDzvc -i --delete'
+        SOURCE: ""
+        REMOTE_HOST: ${{ secrets.STAGING_REMOTE_HOST }}
+        REMOTE_USER: ${{ secrets.STAGING_REMOTE_USER }}
+        REMOTE_PORT: ${{ secrets.STAGING_REMOTE_PORT }}
+        TARGET: ${{ secrets.STAGING_REMOTE_TARGET }}
+        EXCLUDE: "/node_modules/,/.nyc_output/,/.github/,/.husky/,/.git/,/tests/,.env.test,.env.me,/logs/,/docs/,/config/,AUTH_TOKEN_LOGS.db"
+        SCRIPT_AFTER: |
+          sh /app/culture-forward-api/scripts/deploy.staging.sh /app/culture-forward-api/ staging  
+  deploy-production:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: 'test'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run build task
+        run: npm run build --if-present
+      - name: Deploy to production server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
+          ARGS: "-rlgoDzvc -i --delete"
+          SOURCE: ""
+          REMOTE_HOST: ${{ secrets.PRODUCTION_REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.PRODUCTION_REMOTE_USER }}
+          REMOTE_PORT: ${{ secrets.PRODUCTION_REMOTE_PORT }}
+          TARGET: ${{ secrets.PRODUCTION_REMOTE_TARGET }}
+          EXCLUDE: "/node_modules/,/.nyc_output/,/.github/,/.husky/,/.git/,/tests/,.env.test,.env.me,/logs/,/docs/,/config/,AUTH_TOKEN_LOGS.db"
+          SCRIPT_AFTER: |
+            sh /app/culture-forward-api/scripts/deploy.prod.sh /app/culture-forward-api/ production   

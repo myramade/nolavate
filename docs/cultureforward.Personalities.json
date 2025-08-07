@@ -1,0 +1,545 @@
+[
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe385c"
+    },
+    "key": "ISC",
+    "title": "The Harmonious Innovator",
+    "detail": "Excels in fostering collaborative environments that encourage creativity and efficiency.",
+    "strengths": [
+      "Harmonious collaboration",
+      "Creativity",
+      "Efficiency",
+      "Innovation"
+    ],
+    "values": ["Collaboration", "Creativity", "Efficiency"],
+    "recommendedJobs": ["UX Designer", "Software Developer", "Systems Analyst"],
+    "companyCulture": ["Collaborative", "creative", "efficient"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    }
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe3856"
+    },
+    "key": "SI",
+    "title": "The Engaging Motivator",
+    "detail": "Uses charm and empathy to encourage and uplift team morale.",
+    "strengths": [
+      "Empathy",
+      "Charm",
+      "Motivational skills",
+      "Uplifting team morale"
+    ],
+    "values": ["Positivity", "Teamwork", "Support"],
+    "recommendedJobs": ["UX Designer", "IT Consultant", "Business Analyst"],
+    "companyCulture": ["Positive", "supportive", "team-centric"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "postIds": [
+      {
+        "$oid": "67271c289813afc78ad721d1"
+      },
+      {
+        "$oid": "67af8c0c635c629713876eec"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe384f"
+    },
+    "key": "D",
+    "title": "The Trailblazing Leader",
+    "detail": "Individuals who are assertive, results-oriented, and enjoy challenges.",
+    "strengths": ["Assertiveness", "Results-oriented", "Leadership qualities"],
+    "values": ["Achievement", "Efficiency", "Independence"],
+    "recommendedJobs": [
+      "IT Manager",
+      "Chief Technology Officer",
+      "Project Manager"
+    ],
+    "companyCulture": ["Fast-paced", "goal-oriented", "competitive"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    }
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe3857"
+    },
+    "key": "CI",
+    "title": "The Creative Persuader",
+    "detail": "Leverages communication and precision to craft compelling narratives.",
+    "strengths": [
+      "Precision",
+      "Creativity",
+      "Persuasive communication",
+      "Compelling storytelling"
+    ],
+    "values": ["Creativity", "Accuracy", "Influence"],
+    "recommendedJobs": [
+      "Software Developer",
+      "Content Creator",
+      "IT Entrepreneur"
+    ],
+    "companyCulture": ["Creative", "detail-oriented", "communicative"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "postIds": [
+      {
+        "$oid": "67af8f05bd369192e3921798"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe3858"
+    },
+    "key": "CS",
+    "title": "The Dependable Facilitator",
+    "detail": "Balances teamwork with a keen eye for detail to support and refine processes.",
+    "strengths": [
+      "Teamwork",
+      "Attention to detail",
+      "Process improvement",
+      "Dependability"
+    ],
+    "values": ["Consistency", "Collaboration", "Precision"],
+    "recommendedJobs": [
+      "Quality Assurance",
+      "Project Coordinator",
+      "Administrative Assistant"
+    ],
+    "companyCulture": ["Consistent", "collaborative", "process-driven"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "postIds": [
+      {
+        "$oid": "679d362a298f92638636fd34"
+      },
+      {
+        "$oid": "67af8c0c635c629713876eec"
+      },
+      {
+        "$oid": "67af9a6a84308f842bb5895b"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe385a"
+    },
+    "key": "DIC",
+    "title": "The Mastermind Architect",
+    "detail": "Exceptional at devising strategies with an innovative and analytical approach.",
+    "strengths": [
+      "Strategic thinking",
+      "Innovation",
+      "Analytical skills",
+      "Masterful planning"
+    ],
+    "values": ["Vision", "Strategy", "Expertise"],
+    "recommendedJobs": [
+      "Research & Development Manager",
+      "Data Scientist",
+      "Cybersecurity Analyst"
+    ],
+    "companyCulture": ["Visionary", "strategic", "analytical"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "postIds": [
+      {
+        "$oid": "66fec6fd984ba7af488d81ba"
+      },
+      {
+        "$oid": "66fec6ff1e64d27d38cd8251"
+      },
+      {
+        "$oid": "6717f80adaf2919e2cb69ab0"
+      },
+      {
+        "$oid": "671913979813afc78ad721c5"
+      },
+      {
+        "$oid": "671913c3205ff25f453d4e2c"
+      },
+      {
+        "$oid": "67192065205ff25f453d4e34"
+      },
+      {
+        "$oid": "671a78c4daf2919e2cb69ac1"
+      },
+      {
+        "$oid": "671a9709cbdd998d233001db"
+      },
+      {
+        "$oid": "67a2af436e7ec84d9e4df869"
+      },
+      {
+        "$oid": "67ad072aafd91dac6f45b218"
+      },
+      {
+        "$oid": "67ad0b76902590bf1d212fda"
+      },
+      {
+        "$oid": "67af93e6635c629713876eed"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe3852"
+    },
+    "key": "C",
+    "title": "The Analytical Strategist",
+    "detail": "Combines assertiveness with sociability to lead and inspire change.",
+    "strengths": [
+      "Analytical skills",
+      "Strategic thinking",
+      "Leadership with a focus on details",
+      "Inspirational"
+    ],
+    "values": ["Accuracy", "Expertise", "Quality"],
+    "recommendedJobs": [
+      "Software Architect",
+      "Data Scientist",
+      "Cybersecurity Analyst"
+    ],
+    "companyCulture": ["Detail-oriented", "structured", "high standards"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "postIds": [
+      {
+        "$oid": "6717f80adaf2919e2cb69ab0"
+      },
+      {
+        "$oid": "671913979813afc78ad721c5"
+      },
+      {
+        "$oid": "671913c3205ff25f453d4e2c"
+      },
+      {
+        "$oid": "67ad072aafd91dac6f45b218"
+      },
+      {
+        "$oid": "67af9a6a84308f842bb5895b"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe3854"
+    },
+    "key": "DS",
+    "title": "The Grounded Pioneer",
+    "detail": "Blends ambition with a methodical approach to steadily drive progress.",
+    "strengths": [
+      "Ambitious",
+      "Methodical approach",
+      "Steady progress",
+      "Balance of drive and stability"
+    ],
+    "values": ["Progress", "Reliability", "Practicality"],
+    "recommendedJobs": [
+      "Network Engineer",
+      "Systems Administrator",
+      "IT Manager"
+    ],
+    "companyCulture": ["Practical", "reliable", "steady"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    }
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe3855"
+    },
+    "key": "DC",
+    "title": "The Tactical Executive",
+    "detail": "Merges leadership with meticulous planning to achieve high standards.",
+    "strengths": [
+      "Tactical thinking",
+      "Leadership skills",
+      "Meticulous planning",
+      "High standards"
+    ],
+    "values": ["Excellence", "Strategy", "Precision"],
+    "recommendedJobs": [
+      "Information Security Specialist",
+      "IT Project Manager",
+      "Systems Analyst"
+    ],
+    "companyCulture": ["Strategic", "high-achieving", "meticulous"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "postIds": [
+      {
+        "$oid": "66fec6ff1e64d27d38cd8251"
+      },
+      {
+        "$oid": "671a78c4daf2919e2cb69ac1"
+      },
+      {
+        "$oid": "671a85f8daf2919e2cb69ac2"
+      },
+      {
+        "$oid": "67271243205ff25f453d4e38"
+      },
+      {
+        "$oid": "67a2af436e7ec84d9e4df869"
+      },
+      {
+        "$oid": "67ace9ad5084ce9be4cc2aa2"
+      },
+      {
+        "$oid": "67af93e6635c629713876eed"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe385b"
+    },
+    "key": "DSC",
+    "title": "The Systematic Trailblazer",
+    "detail": "Expert in implementing bold visions with precision and reliability.",
+    "strengths": [
+      "Systematic approach",
+      "Precision",
+      "Reliability",
+      "Visionary implementation"
+    ],
+    "values": ["Innovation", "Reliability", "Structure"],
+    "recommendedJobs": [
+      "Operations Director",
+      "Systems Engineer",
+      "Project Director"
+    ],
+    "companyCulture": ["Structured", "reliable", "innovative"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "postIds": [
+      {
+        "$oid": "671a85f8daf2919e2cb69ac2"
+      },
+      {
+        "$oid": "671a9709cbdd998d233001db"
+      },
+      {
+        "$oid": "67271243205ff25f453d4e38"
+      },
+      {
+        "$oid": "679d362a298f92638636fd34"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe3851"
+    },
+    "key": "S",
+    "title": "The Reliable Supporter",
+    "detail": "Appreciate stability, consistency, and are great team players.",
+    "strengths": [
+      "Value stability",
+      "Consistency",
+      "Team-oriented",
+      "Supportive nature"
+    ],
+    "values": ["Harmony", "Loyalty", "Dependability"],
+    "recommendedJobs": [
+      "Systems Analyst",
+      "IT Support Specialist",
+      "Database Administrator"
+    ],
+    "companyCulture": ["Stable", "supportive", "team-oriented"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    }
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe385d"
+    },
+    "key": "DICS",
+    "title": "The Universal Visionary",
+    "detail": "Possesses a rare ability to adapt, lead, collaborate, and innovate, making them well-rounded and versatile professionals.",
+    "strengths": [
+      "Adaptability",
+      "Leadership",
+      "Collaboration",
+      "Innovation",
+      "Versatility"
+    ],
+    "values": ["Adaptability", "Vision", "Versatility"],
+    "recommendedJobs": [
+      "Chief Technology Officer",
+      "Entrepreneur",
+      "Consultant"
+    ],
+    "companyCulture": ["Adaptable", "visionary", "versatile"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    }
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe3850"
+    },
+    "key": "I",
+    "title": "The Charismatic Communicator",
+    "detail": "Naturally persuasive, sociable, and thrive in collaborative settings.",
+    "strengths": [
+      "Persuasiveness",
+      "Sociability",
+      "Enjoyment of collaboration",
+      "Communication skills"
+    ],
+    "values": ["Recognition", "Social Interaction", "Influence"],
+    "recommendedJobs": [
+      "UX Designer",
+      "Technical Sales Representative",
+      "IT Consultant"
+    ],
+    "companyCulture": ["Social", "energetic", "collaborative"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "postIds": [
+      {
+        "$oid": "67271c289813afc78ad721d1"
+      },
+      {
+        "$oid": "6727242a9813afc78ad721d2"
+      },
+      {
+        "$oid": "67af8f05bd369192e3921798"
+      },
+      {
+        "$oid": "67af9f261a228575c022b6c6"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe3853"
+    },
+    "key": "DI",
+    "title": "The Dynamic Innovator",
+    "detail": "Combines assertiveness with sociability to lead and inspire change.",
+    "strengths": [
+      "Dynamic leadership",
+      "Sociability",
+      "Innovative thinking",
+      "Ability to inspire change"
+    ],
+    "values": ["Vision", "Initiative", "Enthusiasm"],
+    "recommendedJobs": [
+      "Software Developer",
+      "AI Researcher",
+      "Technology Entrepreneur"
+    ],
+    "companyCulture": ["Innovative", "energetic", "visionary"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "postIds": [
+      {
+        "$oid": "66fec6fd984ba7af488d81ba"
+      },
+      {
+        "$oid": "67192065205ff25f453d4e34"
+      },
+      {
+        "$oid": "6727242a9813afc78ad721d2"
+      },
+      {
+        "$oid": "67ace9ad5084ce9be4cc2aa2"
+      },
+      {
+        "$oid": "67ad0b76902590bf1d212fda"
+      },
+      {
+        "$oid": "67af9f261a228575c022b6c6"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "66b1677d7346defbe9fe3859"
+    },
+    "key": "DIS",
+    "title": "The Versatile Game-Changer",
+    "detail": "Adaptable, enjoys variety, and can lead with creativity and stability.",
+    "strengths": [
+      "Versatility",
+      "Adaptability",
+      "Enjoyment of variety",
+      "Creative and stable leadership"
+    ],
+    "values": ["Flexibility", "Innovation", "Stability"],
+    "recommendedJobs": [
+      "Software Developer",
+      "AI Researcher",
+      "Technology Consultant"
+    ],
+    "companyCulture": ["Flexible", "innovative", "balanced"],
+    "createdTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    },
+    "updatedTime": {
+      "$date": "2024-08-06T00:02:37.293Z"
+    }
+  }
+]

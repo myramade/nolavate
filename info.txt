@@ -1,0 +1,26 @@
+# candidate onboarding media (INFO, EDUCATION, EXPERIENCE)
+src > controllers > candidate > uploadOnboardingMedia.js
+
+# get posts based on personality type
+src > controllers > posts > getPostsForCandidate.js
+src > controllers > posts > getPostsForRecruiter.js
+
+Note: queries have been unfiltered to show wider range of videos based on user:content ratio
+
+# Prospects and Matches
+## create
+src > controllers > posts > postLikes.js
+## query
+src > controllers > matches > getMyMatches.js
+src > controllers > prospects > getProspects.js
+
+# submit Assessment
+src > controllers > assessment > submitAssessment.js
+
+# old  algorithms
+## assessment scoring
+algorithms > scoring.js
+## video transcription
+scripts > python > transcribe.py
+
+
