@@ -84,6 +84,13 @@ class Container {
         return openai;
       }
 
+      // Database service
+      if (name === 'database') {
+        const { default: DatabaseService } = await import('../services/database.js');
+        this.services.set(name, DatabaseService);
+        return DatabaseService;
+      }
+
       console.warn(`Service '${name}' not found in container. Returning null.`);
       return null;
 

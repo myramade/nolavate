@@ -28,8 +28,6 @@ const saveUserData = async (openAIResponse, userId, assessmentId) => {
   logger.info('Updated user document with resume data.');
 };
 
-import { getFormattedDate } from '../../services/helper.js';
-
 export default async function submitAssessment(req, res, next) {
   const logger = container.make('logger');
   const assessmentQuestions = container.make('models/assessmentquestions');

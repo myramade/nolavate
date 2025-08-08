@@ -1,0 +1,48 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  phone     String?
+  industry  String?
+  role      String   @default("USER")
+  isVerified Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Personality {
+  id               String   @id @default(cuid())
+  key              String   @unique
+  title            String
+  detail           String
+  strengths        String[]
+  values           String[]
+  recommendedJobs  String[]
+  companyCulture   String[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("personalities")
+}
+
+model Assessment {
+  id        String   @id @default(cuid())
+  userId    String
+  response  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("assessments")
+}
