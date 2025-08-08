@@ -1,8 +1,14 @@
 import dayjs from 'dayjs';
 import advancedFormat from 'dayjs/plugin/advancedFormat.js';
 import container from '../../container.js';
-import HttpError from '../../errors/HttpError.js';
 import { getFormattedDate, skipUndefined } from '../../services/helper.js';
+
+class HttpError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
 dayjs.extend(advancedFormat);
 
 export default async function getResults(req, res, next) {

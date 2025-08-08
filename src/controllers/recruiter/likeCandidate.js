@@ -114,13 +114,13 @@ export default async function likeCandidate(req, res, next) {
       return sendResponse(req, res, isAMatch);
     }
     // If only the recruiter liked candidate, and now unlikes candidate
-    if (!existingMatch.accepted && !existingMatch.candidate) {
+    if (!existingMatch.accepted && !existingMatch.candidate.id) {
       await match.deleteById(existingMatch.id);
       await post.decrement({ id: existingMatch.post.id }, 'matchCount', 1);
       return sendResponse(req, res, isAMatch);
     }
     // Recruiter and candidated have liked each other, but match not created yet
-    if (!existingMatch.accepted && existingMatch.candidate) {
+    if (!existingMatch.accepted && existingMatch.candidate.id) {
       await match.updateById(
         existingMatch.id,
         {

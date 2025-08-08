@@ -72,7 +72,7 @@ export default async function updateLikeCount(req, res, next) {
         {
           user: {
             id: {
-              equals: req.body.sub,
+              equals: req.token.sub,
             },
           },
           post: {
