@@ -16,9 +16,6 @@ const createProfileSummary = (resumeData) => {
   return Object.values(resumeData).join(' ');
 };
 
-import container from '../../container.js';
-import { skipUndefined } from '../../helpers/service.js';
-
 // For recruiters
 export default async function getPostsForRecruiters(req, res, next) {
   const logger = container.make('logger');
@@ -33,7 +30,7 @@ export default async function getPostsForRecruiters(req, res, next) {
     // const userData = await user.findById(req.token.sub, { id: true, personality: true })
     let jobSkillIdsToNames;
     if (req.body.skills) {
-      jobSkillIdsToNames = await container.make('models/jobskill').findManyOr(
+      jobSkillIdsToNames = await jobSkill.findManyOr(
         req.body.skills.map((skillId) => {
           return {
             id: skillId,
@@ -177,8 +174,8 @@ export default async function getPostsForRecruiters(req, res, next) {
         results[i].photo = results[i].photo.streamUrl;
       }
       // Format phone number
-      user.phone = `${user.phoneCountryCode || ''}${user.phone}`;
-      user.phoneCountryCode = undefined;
+      results[i].phone = `${results[i].phoneCountryCode || ''}${results[i].phone}`;
+      results[i].phoneCountryCode = undefined;
       // Get match media transcripts - this is really expensive
       results[i].matchMedia.forEach((media) => {
         for (let j = 0; j < transcripts.length; j++) {

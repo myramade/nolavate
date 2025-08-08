@@ -5,8 +5,6 @@ import {
   getFormattedDate,
 } from '../../services/helper.js';
 
-import { getFormattedDate } from '../../helpers/service.js';
-
 const sendResponse = (req, res, isAMatch) => {
   res.send({
     data: {
