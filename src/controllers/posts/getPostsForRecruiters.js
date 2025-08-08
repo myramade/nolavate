@@ -16,6 +16,9 @@ const createProfileSummary = (resumeData) => {
   return Object.values(resumeData).join(' ');
 };
 
+import container from '../../container.js';
+import { skipUndefined } from '../../helpers/service.js';
+
 // For recruiters
 export default async function getPostsForRecruiters(req, res, next) {
   const logger = container.make('logger');

@@ -4,7 +4,7 @@ import {
   getFormattedDate,
 } from '../../services/helper.js';
 
-export default async function getPostsById(req, res, next) {
+export default async function getPostById(req, res, next) {
   const logger = container.make('logger');
   const post = container.make('models/post');
   try {

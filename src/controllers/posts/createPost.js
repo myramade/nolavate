@@ -36,7 +36,7 @@ const handleSkills = async (req) => {
   }
   if (req.body.optionalSkills) {
     optionalSkills = req.body.optionalSkills.split(',');
-    if (requiredSkills.length > 4) {
+    if (optionalSkills.length > 4) {
       return {
         skills: null,
         sError: 'Optional skills cannot exceed 4.',
