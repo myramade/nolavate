@@ -1,7 +1,8 @@
 
+import jwt from 'jsonwebtoken';
+
 export default function jwtAuth(requiredRole, optional = false, subRole = null) {
   return (req, res, next) => {
-    // Mock JWT validation - replace with actual JWT validation
     const token = req.headers.authorization?.replace('Bearer ', '');
     
     if (!token && !optional) {
@@ -9,15 +10,26 @@ export default function jwtAuth(requiredRole, optional = false, subRole = null) 
     }
     
     if (token) {
-      // Mock token payload - replace with actual JWT verification
-      req.token = {
-        sub: 'mock-user-id',
-        name: 'Mock User',
-        role: requiredRole,
-        roleSubtype: subRole
-      };
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        
+        // Validate role if required
+        if (requiredRole && decoded.role !== requiredRole) {
+          return res.status(403).json({ message: 'Insufficient permissions' });
+        }
+        
+        // Validate sub-role if specified
+        if (subRole && decoded.roleSubtype !== subRole) {
+          return res.status(403).json({ message: 'Insufficient permissions' });
+        }
+        
+        req.token = decoded;
+        next();
+      } catch (error) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+    } else {
+      next();
     }
-    
-    next();
   };
 }

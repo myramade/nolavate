@@ -1,4 +1,3 @@
-
 import express from 'express';
 import container from './container.js';
 
@@ -9,8 +8,9 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// Import routers
 import assessmentRoutes from './controllers/assessment/index.js';
+import authRoutes from './controllers/auth/index.js';
 import candidateRoutes from './controllers/candidate/index.js';
 import jobOffersRoutes from './controllers/jobOffers/index.js';
 import matchesRoutes from './controllers/matches/index.js';
@@ -19,7 +19,9 @@ import prospectsRoutes from './controllers/prospects/index.js';
 import recruiterRoutes from './controllers/recruiter/index.js';
 import webRoutes from './controllers/web/index.js';
 
+// Use routers
 app.use('/assessment', assessmentRoutes);
+app.use('/auth', authRoutes);
 app.use('/candidate', candidateRoutes);
 app.use('/joboffers', jobOffersRoutes);
 app.use('/matches', matchesRoutes);
@@ -36,7 +38,7 @@ app.get('/health', (req, res) => {
 // Global error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
-  
+
   // Handle specific error types
   if (err.name === 'ValidationError') {
     return res.status(400).json({
@@ -45,7 +47,7 @@ app.use((err, req, res, next) => {
       generatedAt: new Date().toISOString()
     });
   }
-  
+
   if (err.name === 'UnauthorizedError') {
     return res.status(401).json({
       message: 'Unauthorized',
@@ -53,7 +55,7 @@ app.use((err, req, res, next) => {
       generatedAt: new Date().toISOString()
     });
   }
-  
+
   // Default error response
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
