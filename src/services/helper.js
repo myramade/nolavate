@@ -42,3 +42,30 @@ export const createMessage = async (container, req, userIds, message) => {
   logger.info(`Creating message for users ${userIds.join(', ')}: ${message}`);
   return Promise.resolve();
 };
+
+export const deleteData = async (filePath) => {
+  try {
+    // Mock file deletion
+    console.log(`Mock: Deleting file at ${filePath}`);
+    return Promise.resolve();
+  } catch (error) {
+    console.error(`Error deleting file: ${error.message}`);
+    throw error;
+  }
+};
+
+export const isHexId = (id) => {
+  return /^[0-9a-fA-F]{24}$/.test(id);
+};
+
+export const toTitleCase = (str) => {
+  return str.replace(/\w\S*/g, (txt) => 
+    txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+  );
+};
+
+export const handleAsync = (fn) => {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};

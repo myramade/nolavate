@@ -33,6 +33,47 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Global error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err.stack);
+  
+  // Handle specific error types
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      message: 'Validation Error',
+      details: err.message,
+      generatedAt: new Date().toISOString()
+    });
+  }
+  
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).json({
+      message: 'Unauthorized',
+      details: err.message,
+      generatedAt: new Date().toISOString()
+    });
+  }
+  
+  // Default error response
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    message: statusCode === 500 ? 'Internal Server Error' : err.message,
+    generatedAt: new Date().toISOString()
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    message: 'Route not found',
+    path: req.originalUrl,
+    generatedAt: new Date().toISOString()
+  });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
+}).on('error', (err) => {
+  console.error('Server failed to start:', err);
+  process.exit(1);
 });
