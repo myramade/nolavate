@@ -3,7 +3,7 @@ class Container {
     this.services = new Map();
   }
 
-  make(name) {
+  async make(name) {
     try {
       if (this.services.has(name)) {
         return this.services.get(name);
@@ -86,9 +86,9 @@ class Container {
 
       // Database service
       if (name === 'database') {
-        const { default: DatabaseService } = await import('../services/database.js');
-        this.services.set(name, DatabaseService);
-        return DatabaseService;
+        const DatabaseService = await import('../services/database.js');
+        this.services.set(name, DatabaseService.default);
+        return DatabaseService.default;
       }
 
       console.warn(`Service '${name}' not found in container. Returning null.`);
