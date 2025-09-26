@@ -3,7 +3,7 @@ class Container {
     this.services = new Map();
   }
 
-  async make(name) {
+  make(name) {
     try {
       if (this.services.has(name)) {
         return this.services.get(name);
@@ -84,11 +84,17 @@ class Container {
         return openai;
       }
 
-      // Database service
+      // Database service (mock)
       if (name === 'database') {
-        const DatabaseService = await import('../services/database.js');
-        this.services.set(name, DatabaseService.default);
-        return DatabaseService.default;
+        const mockDatabase = {
+          prisma: {
+            $connect: async () => console.log('Mock database connected'),
+            $disconnect: async () => console.log('Mock database disconnected')
+          },
+          connectToDatabase: async () => console.log('Mock database connection established')
+        };
+        this.services.set(name, mockDatabase);
+        return mockDatabase;
       }
 
       console.warn(`Service '${name}' not found in container. Returning null.`);

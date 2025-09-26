@@ -4,12 +4,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   email     String   @unique
   name      String?
   phone     String?
@@ -23,7 +23,7 @@ model User {
 }
 
 model Personality {
-  id               String   @id @default(cuid())
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
   key              String   @unique
   title            String
   detail           String
@@ -38,8 +38,8 @@ model Personality {
 }
 
 model Assessment {
-  id        String   @id @default(cuid())
-  userId    String
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
   response  Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
