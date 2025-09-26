@@ -1,35 +1,27 @@
 
-import { Client, Pool } from 'pg';
+const { PrismaClient } = require('@prisma/client');
 
-class DatabaseService {
-  constructor() {
-    this.pool = null;
-  }
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+});
 
-  async connect() {
-    if (!this.pool) {
-      this.pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-        max: 10,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
-      });
-    }
-    return this.pool;
-  }
-
-  async query(text, params) {
-    const pool = await this.connect();
-    return pool.query(text, params);
-  }
-
-  async close() {
-    if (this.pool) {
-      await this.pool.end();
-      this.pool = null;
-    }
+// Connection test
+async function connectToDatabase() {
+  try {
+    await prisma.$connect();
+    console.log('Successfully connected to database');
+  } catch (error) {
+    console.error('Failed to connect to database:', error);
+    process.exit(1);
   }
 }
 
-export default new DatabaseService();
+// Graceful shutdown
+process.on('beforeExit', async () => {
+  await prisma.$disconnect();
+});
+
+module.exports = {
+  prisma,
+  connectToDatabase
+};
