@@ -2,7 +2,8 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { ObjectId } from 'bson-objectid';
+import ObjectIDPkg from 'bson-objectid';
+const { ObjectId } = ObjectIDPkg;
 import container from '../../container.js';
 import validateRequest from '../../middleware/validateRequest.js';
 

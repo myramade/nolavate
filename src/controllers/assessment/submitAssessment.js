@@ -99,9 +99,9 @@ export default async function submitAssessment(req, res, next) {
       message: 'Assessment submitted successfully',
       generatedAt: getFormattedDate()
     });
-          "We're experiencing data issues at the moment. Please try again later.",
-      });
-    }
+
+    // TODO: Implement full assessment logic when not using mock data
+    /* Commented out until external services are configured
     const organizedResponse = organizeResponse(questions, req.body.answers);
     const scores = calculateScore(organizedResponse);
     const personalityResult = calculateResults(scores, personalities);
@@ -215,6 +215,7 @@ export default async function submitAssessment(req, res, next) {
       },
       generatedAt: getFormattedDate(),
     });
+    */
   } catch (error) {
     logger.error('Error occurred submitting assessment. Reason:');
     logger.error(error.stack);
