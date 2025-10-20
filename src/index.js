@@ -1,9 +1,14 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { container as newContainer } from './di/container.js';
 import legacyContainer from './container.js';
 import { config } from './config/env.js';
 import { logger } from './config/logger.js';
 import { connectToMongoDB } from './services/mongodb.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = config.port;
@@ -16,6 +21,9 @@ await legacyContainer.initialize();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
 // Import routers
 import assessmentRoutes from './controllers/assessment/index.js';
 import authRoutes from './controllers/auth/index.js';
@@ -27,8 +35,8 @@ import prospectsRoutes from './controllers/prospects/index.js';
 import recruiterRoutes from './controllers/recruiter/index.js';
 import webRoutes from './controllers/web/index.js';
 
-// Root route - API welcome message
-app.get('/', (req, res) => {
+// API info route (for programmatic access)
+app.get('/api', (req, res) => {
   res.json({
     name: 'Culture Forward API',
     version: '1.0.0',
