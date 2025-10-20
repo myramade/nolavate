@@ -40,6 +40,11 @@ router.post('/register', validateRequest, async (req, res) => {
     });
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET || process.env.SESSION_TOKEN_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
+    }
+    
     const token = jwt.sign(
       { 
         sub: user._id,
@@ -48,7 +53,7 @@ router.post('/register', validateRequest, async (req, res) => {
         role: user.role,
         roleSubtype: user.roleSubtype
       },
-      process.env.JWT_SECRET || 'your-secret-key',
+      jwtSecret,
       { expiresIn: '24h' }
     );
 
@@ -92,6 +97,11 @@ router.post('/login', validateRequest, async (req, res) => {
     }
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET || process.env.SESSION_TOKEN_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
+    }
+    
     const token = jwt.sign(
       { 
         sub: user._id,
@@ -100,7 +110,7 @@ router.post('/login', validateRequest, async (req, res) => {
         role: user.role,
         roleSubtype: user.roleSubtype
       },
-      process.env.JWT_SECRET || 'your-secret-key',
+      jwtSecret,
       { expiresIn: '24h' }
     );
 
