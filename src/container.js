@@ -1,72 +1,86 @@
+import { getDatabase } from './services/mongodb.js';
+import UserModel from './models/user.js';
+import PostModel from './models/post.js';
+import CompanyModel from './models/company.js';
+import JobOfferModel from './models/joboffers.js';
+import MatchModel from './models/match.js';
+import AssessmentModel from './models/assessment.js';
+import AssessmentQuestionsModel from './models/assessmentquestions.js';
+import PersonalityModel from './models/personality.js';
+import PostLikesModel from './models/postlikes.js';
+import PostViewsModel from './models/postviews.js';
+import NotificationModel from './models/notifications.js';
+import TranscriptionModel from './models/transcriptions.js';
+import JobSkillModel from './models/jobskill.js';
+import ROLES from './config/roles.js';
+import { createUploadMiddleware } from './infrastructure/upload.service.js';
+
 class Container {
   constructor() {
     this.services = new Map();
+    this.models = new Map();
+    this.db = null;
+    
+    // Initialize services immediately (synchronously)
+    this.initializeServices();
+  }
+
+  initializeServices() {
+    // Register common services
+    this.services.set('roles', ROLES);
+    this.services.set('upload', createUploadMiddleware);
+    this.services.set('logger', {
+      info: (message) => console.log(`INFO: ${message}`),
+      error: (message) => console.error(`ERROR: ${message}`),
+      warn: (message) => console.warn(`WARN: ${message}`),
+      debug: (message) => console.debug(`DEBUG: ${message}`)
+    });
+  }
+
+  async initialize() {
+    // Get database connection (will be null if not connected yet)
+    this.db = getDatabase();
+    
+    // Initialize all models with database connection (or null)
+    this.models.set('user', new UserModel(this.db));
+    this.models.set('post', new PostModel(this.db));
+    this.models.set('company', new CompanyModel(this.db));
+    this.models.set('joboffer', new JobOfferModel(this.db));
+    this.models.set('match', new MatchModel(this.db));
+    this.models.set('assessment', new AssessmentModel(this.db));
+    this.models.set('assessmentquestions', new AssessmentQuestionsModel(this.db));
+    this.models.set('personality', new PersonalityModel(this.db));
+    this.models.set('postlikes', new PostLikesModel(this.db));
+    this.models.set('postviews', new PostViewsModel(this.db));
+    this.models.set('notification', new NotificationModel(this.db));
+    this.models.set('transcription', new TranscriptionModel(this.db));
+    this.models.set('jobskill', new JobSkillModel(this.db));
+    
+    if (this.db) {
+      console.log('Container initialized with MongoDB database connection');
+    } else {
+      console.warn('Container initialized without database connection - using mock data');
+    }
   }
 
   make(name) {
     try {
+      // Check if it's a model request
+      if (name.startsWith('models/')) {
+        const modelName = name.replace('models/', '');
+        if (this.models.has(modelName)) {
+          return this.models.get(modelName);
+        }
+        console.warn(`Model '${modelName}' not found in container.`);
+        return null;
+      }
+
+      // Check if it's a service
       if (this.services.has(name)) {
         return this.services.get(name);
       }
 
-      // Mock logger
-      if (name === 'logger') {
-        const logger = {
-          info: (message) => console.log(`INFO: ${message}`),
-          error: (message) => console.error(`ERROR: ${message}`),
-          warn: (message) => console.warn(`WARN: ${message}`),
-          debug: (message) => console.debug(`DEBUG: ${message}`)
-        };
-        this.services.set(name, logger);
-        return logger;
-      }
-
-      // Mock roles
-      if (name === 'roles') {
-        const roles = {
-          user: 'user',
-          candidate: 'candidate',
-          recruiter: 'recruiter',
-          admin: 'admin'
-        };
-        this.services.set(name, roles);
-        return roles;
-      }
-
-      // Mock upload service
-      if (name === 'upload') {
-        const upload = (fileTypes = 'all') => ({
-          single: (fieldName) => (req, res, next) => {
-            // Mock file upload middleware
-            req.file = {
-              filename: 'mock-file.txt',
-              path: '/mock/path/mock-file.txt',
-              mimetype: 'text/plain',
-              size: 1024
-            };
-            next();
-          }
-        });
-        this.services.set(name, upload);
-        return upload;
-      }
-
-      // Mock models - return empty functions that resolve
-      if (name.startsWith('models/')) {
-        const mockModel = {
-          findById: async (id, select = {}) => ({ id, ...select }),
-          findMany: async (where = {}, select = {}, limit = -1, skip = 0, sortBy = 'createdTime', order = 'desc') => [],
-          findManyOr: async (whereArray) => [],
-          create: async (data) => ({ id: 'mock-id', ...data }),
-          update: async (id, data) => ({ id, ...data }),
-          delete: async (id) => ({ id }),
-          count: async (where = {}) => 0
-        };
-        this.services.set(name, mockModel);
-        return mockModel;
-      }
-
-      // Mock job queue
+      // Handle job queue (mock for now)
       if (name.includes('jobQueue')) {
         const jobQueue = (queueName) => ({
           add: async (data) => Promise.resolve({ id: 'job-id' })
@@ -75,7 +89,7 @@ class Container {
         return jobQueue;
       }
 
-      // Mock OpenAI service
+      // Handle OpenAI service (mock for now)
       if (name.includes('openai')) {
         const openai = {
           createCompletion: async (prompt) => ({ choices: [{ text: 'Mock response' }] })
@@ -84,20 +98,7 @@ class Container {
         return openai;
       }
 
-      // Database service (mock)
-      if (name === 'database') {
-        const mockDatabase = {
-          prisma: {
-            $connect: async () => console.log('Mock database connected'),
-            $disconnect: async () => console.log('Mock database disconnected')
-          },
-          connectToDatabase: async () => console.log('Mock database connection established')
-        };
-        this.services.set(name, mockDatabase);
-        return mockDatabase;
-      }
-
-      console.warn(`Service '${name}' not found in container. Returning null.`);
+      console.warn(`Service '${name}' not found in container.`);
       return null;
 
     } catch (error) {
@@ -111,4 +112,5 @@ class Container {
   }
 }
 
-export default new Container();
+const container = new Container();
+export default container;

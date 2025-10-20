@@ -1,10 +1,16 @@
 import express from 'express';
-import { container } from './di/container.js';
+import { container as newContainer } from './di/container.js';
+import legacyContainer from './container.js';
 import { config } from './config/env.js';
 import { logger } from './config/logger.js';
+import { connectToMongoDB } from './services/mongodb.js';
 
 const app = express();
 const PORT = config.port;
+
+// Initialize MongoDB connection and legacy container
+await connectToMongoDB();
+await legacyContainer.initialize();
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
