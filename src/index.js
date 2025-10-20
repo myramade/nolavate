@@ -27,6 +27,34 @@ import prospectsRoutes from './controllers/prospects/index.js';
 import recruiterRoutes from './controllers/recruiter/index.js';
 import webRoutes from './controllers/web/index.js';
 
+// Root route - API welcome message
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Culture Forward API',
+    version: '1.0.0',
+    status: 'running',
+    message: 'Welcome to Culture Forward - Recruitment & Job Matching Platform',
+    endpoints: {
+      health: '/health',
+      authentication: '/auth',
+      assessments: '/assessment',
+      candidates: '/candidate',
+      recruiters: '/recruiter',
+      posts: '/posts',
+      matches: '/matches',
+      jobOffers: '/joboffers',
+      prospects: '/prospects',
+      companies: '/web'
+    },
+    documentation: 'https://github.com/myramade/nolavate'
+  });
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 // Use routers
 app.use('/assessment', assessmentRoutes);
 app.use('/auth', authRoutes);
@@ -37,11 +65,6 @@ app.use('/posts', postsRoutes);
 app.use('/prospects', prospectsRoutes);
 app.use('/recruiter', recruiterRoutes);
 app.use('/web', webRoutes);
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
