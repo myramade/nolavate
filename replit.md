@@ -11,6 +11,24 @@ A NodeJS Express.js API for the Culture Forward application - a recruitment and 
 
 ## Recent Changes (October 2025)
 
+### Database Connection Fixed - MongoDB Integrated
+**Date:** October 20, 2025
+
+Fixed critical database connectivity issue by wiring real MongoDB models to the API:
+
+**What was fixed:**
+- Created MongoDB connection service (`src/services/mongodb.js`)
+- Built 12 MongoDB model classes with CRUD operations
+- Updated legacy container to use real database models instead of mocks
+- All API endpoints now persist data to MongoDB database
+- Authentication (register/login) verified working with real data persistence
+
+**Testing Results:**
+- ✅ User registration saves to database
+- ✅ User login retrieves from database
+- ✅ JWT authentication working correctly
+- ✅ Database connection established on startup
+
 ### File Structure Refactoring - Clean Code Architecture
 **Date:** October 20, 2025
 
@@ -34,13 +52,14 @@ src/
 ├── middleware/         # Express middleware
 │   ├── jwtAuth.js
 │   └── validateRequest.js
-├── models/             # Domain models (legacy)
+├── models/             # MongoDB models (BaseModel + 12 collections)
 ├── repositories/       # Data access layer
 │   ├── assessment.repository.js
 │   ├── personality.repository.js
 │   └── user.repository.js
-├── services/           # Database connection
-│   ├── database.js     # Prisma client
+├── services/           # Database connections
+│   ├── database.js     # Prisma client (for future migration)
+│   ├── mongodb.js      # MongoDB connection (active)
 │   └── helper.js       # (Legacy - being phased out)
 ├── utils/              # Pure utility functions
 │   ├── array.js
@@ -79,9 +98,10 @@ Routes → Controllers → Services → Repositories → Database
 
 ### Database
 - **Provider**: MongoDB (Digital Ocean managed database)
-- **ORM**: Prisma
-- **Models**: User, Assessment, Personality
-- **Connection**: Auto-retry with graceful shutdown
+- **Driver**: Native MongoDB driver
+- **Models**: 12 collections (User, Post, Company, JobOffer, Match, Assessment, AssessmentQuestions, Personality, PostLikes, PostViews, Notifications, Transcriptions, JobSkill)
+- **Connection**: Graceful connection with fallback to mock mode if unavailable
+- **Architecture**: BaseModel class with CRUD operations extended by all models
 
 ## Environment Variables
 
