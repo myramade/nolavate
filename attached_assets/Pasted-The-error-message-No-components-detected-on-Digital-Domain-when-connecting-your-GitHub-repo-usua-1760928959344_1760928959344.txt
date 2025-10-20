@@ -1,0 +1,38 @@
+The error message "No components detected" on Digital Domain, when connecting your GitHub repo, usually means the platform can't find the files it needs to identify your app (like package.json, requirements.txt, or Dockerfile). Here are the main steps to fix and troubleshoot:[1][2]
+
+### Check File Presence and Location
+- Make sure your repo contains one of these files in the root or specified source folder: package.json (for Node.js), requirements.txt (for Python), or Dockerfile (for custom setups).[3][2][1]
+- If your app files are in a subdirectory (not in the root), specify the source directory during setup so the platform looks there.[1]
+
+### File Structure Tips
+- For Node.js, package.json must be present at the expected location; for Python, requirements.txt is required—especially if you use dependency managers (like Poetry), which may need exporting requirements.txt for deployment.[4][1]
+- Dockerfile should reference files using the correct relative paths. If Dockerfile or dependency files are in different folders, use the COPY instruction carefully, matching paths inside your repo.[3][4]
+
+### Permissions Check
+- Confirm you have granted Digital Domain access to your GitHub repo. The platform needs permission to read the files when connecting.[1]
+
+### Common Fixes
+- Move package.json, requirements.txt, or Dockerfile to your repo's root directory, if possible.
+- If you use a monorepo, point Digital Domain to the specific subfolder that contains these files.
+- For Python, if you use Poetry, export requirements.txt with:
+  ```
+  poetry export --without-hashes --format requirements.txt > requirements.txt
+  ```
+  and commit it to your repo.[1]
+
+### Environment Variables and Run Commands
+- Define necessary environment variables for your app in the deployment settings.[1]
+- Ensure any run/start command set in platform settings or Procfile matches your repo's structure.[1]
+
+By following these steps, you should resolve the "No components detected" error and successfully deploy your app using GitHub on Digital Domain.[2][3][1]
+
+[1](https://bobcares.com/blog/digitalocean-no-detected-components/)
+[2](https://github.com/cookiecutter/cookiecutter-django/issues/3710)
+[3](https://www.reddit.com/r/docker/comments/a5bghf/docker_build_npm_cannot_find_packagejson_file/)
+[4](https://www.reddit.com/r/docker/comments/1b1helk/my_dockerfile_build_cant_find_the_requirementstxt/)
+[5](https://stackoverflow.com/questions/65844113/solving-the-error-of-docker-build-not-accesing-package-json)
+[6](https://github.com/docker/getting-started/issues/76)
+[7](https://github.com/docker/buildx/issues/415)
+[8](https://forums.docker.com/t/issue-with-docker-build-could-not-open-requirements-file-no-such-file-or-directory/138096)
+[9](https://stackoverflow.com/questions/55589014/npm-cant-find-package-json-when-running-docker-container-with-compose)
+[10](https://docs.github.com/en/get-started/using-github/troubleshooting-connectivity-problems)
