@@ -11,6 +11,39 @@ A NodeJS Express.js API for the Culture Forward application - a recruitment and 
 
 ## Recent Changes (October 2025)
 
+### Mobile-Friendly Frontend with OAuth Integration
+**Date:** October 20, 2025
+
+Added a complete mobile-responsive frontend with Google and Apple OAuth authentication:
+
+**What was added:**
+- Mobile-friendly sign-up page (`public/index.html`) with Google and Apple sign-in buttons
+- Mobile-friendly login page (`public/login.html`)
+- Responsive CSS with modern gradient design (`public/css/styles.css`)
+- Complete authentication flow with OAuth integration (`public/js/auth.js`)
+- Backend Google OAuth endpoint (`POST /auth/google`)
+- Backend Apple Sign-In endpoint (`POST /auth/apple`)
+- Dashboard pages for candidates and recruiters
+- Static file serving from Express
+
+**Features:**
+- ✅ Mobile-first responsive design (works perfectly on all devices)
+- ✅ Google OAuth integration with ID token verification
+- ✅ Apple Sign-In integration with authorization code exchange
+- ✅ Email/Password traditional authentication
+- ✅ Role selection (Candidate vs Recruiter)
+- ✅ Beautiful gradient UI with smooth animations
+- ✅ Touch-friendly buttons (48px minimum tap targets)
+- ✅ Password show/hide toggle
+- ✅ Real-time form validation
+- ✅ Success/error notifications
+- ✅ Automatic redirect to role-specific dashboards
+
+**OAuth Setup:**
+- See `OAUTH_SETUP.md` for complete configuration instructions
+- Requires `GOOGLE_CLIENT_ID` for Google OAuth
+- Requires `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID` for Apple Sign-In
+
 ### Database Connection Fixed - MongoDB Integrated
 **Date:** October 20, 2025
 
@@ -92,9 +125,16 @@ Routes → Controllers → Services → Repositories → Database
 - **Database**: Prisma ORM with MongoDB
 
 ### Authentication
-- JWT-based authentication
-- Role-based access control (USER, CANDIDATE, RECRUITER, ADMIN)
-- Configurable token expiration
+- **JWT-based authentication** - Secure token-based auth
+- **OAuth Integration** - Google and Apple sign-in support
+- **Email/Password** - Traditional authentication method
+- **Role-based access control** - USER, CANDIDATE, RECRUITER, ADMIN
+- **Frontend Pages:**
+  - `/` or `/index.html` - Sign-up page
+  - `/login.html` - Login page
+  - `/candidate/dashboard.html` - Candidate dashboard
+  - `/recruiter/dashboard.html` - Recruiter dashboard
+- **Configurable token expiration**
 
 ### Database
 - **Provider**: MongoDB (Digital Ocean managed database)
@@ -107,11 +147,25 @@ Routes → Controllers → Services → Repositories → Database
 
 Required environment variables:
 ```bash
+# Database
 DATABASE_URL=mongodb+srv://...      # MongoDB connection string
+
+# Server
 NODE_ENV=development|production     # Environment
 PORT=5000                          # Server port
+
+# JWT Authentication
 JWT_SECRET=your-secret-key         # JWT signing key
 JWT_EXPIRES_IN=7d                  # Token expiration
+
+# Google OAuth (Optional)
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com  # Google OAuth Client ID
+
+# Apple Sign-In (Optional)
+APPLE_CLIENT_ID=com.yourcompany.app              # Apple Service ID
+APPLE_TEAM_ID=ABC123                             # Apple Team ID
+APPLE_KEY_ID=XYZ789                              # Apple Key ID
+APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY..."    # Apple Private Key (.p8)
 ```
 
 ## Deployment
@@ -144,8 +198,19 @@ Configuration files:
 
 ## API Endpoints
 
+### Frontend Pages
+- `/` or `/index.html` - Sign-up page (mobile-friendly)
+- `/login.html` - Login page (mobile-friendly)
+- `/candidate/dashboard.html` - Candidate dashboard
+- `/recruiter/dashboard.html` - Recruiter dashboard
+
+### API Routes
 - `/health` - Health check
-- `/auth` - Authentication
+- `/api` - API information
+- `/auth/register` - Email/password registration
+- `/auth/login` - Email/password login
+- `/auth/google` - Google OAuth authentication
+- `/auth/apple` - Apple Sign-In authentication
 - `/assessment` - Personality assessments
 - `/candidate` - Candidate operations
 - `/joboffers` - Job offers
@@ -157,6 +222,11 @@ Configuration files:
 
 ## Next Steps
 
+### Immediate Actions:
+1. **Configure OAuth** - Set up Google and Apple OAuth credentials (see `OAUTH_SETUP.md`)
+2. **Test Authentication** - Verify all three auth methods work (email, Google, Apple)
+3. **Deploy to Production** - Update OAuth settings for production domains
+
 ### Planned Improvements:
 1. Complete controller refactoring (move business logic to services)
 2. Add comprehensive error handling
@@ -164,12 +234,22 @@ Configuration files:
 4. Add API documentation (Swagger/OpenAPI)
 5. Write unit and integration tests
 6. Add request validation schemas
+7. Build out full candidate/recruiter dashboards
+8. Add profile management features
+9. Implement password reset functionality
 
 ## Support & Documentation
 
+### Project Documentation
+- `OAUTH_SETUP.md` - Complete guide for configuring Google and Apple OAuth
+- `replit.md` - This file (project overview and architecture)
+
+### External Resources
 - [Prisma Docs](https://www.prisma.io/docs/)
 - [Express.js Docs](https://expressjs.com/)
 - [Digital Ocean App Platform](https://docs.digitalocean.com/products/app-platform/)
+- [Google Sign-In Docs](https://developers.google.com/identity/gsi/web)
+- [Apple Sign-In Docs](https://developer.apple.com/sign-in-with-apple/)
 
 ---
 
