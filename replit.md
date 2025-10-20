@@ -11,6 +11,29 @@ A NodeJS Express.js API for the Culture Forward application - a recruitment and 
 
 ## Recent Changes (October 2025)
 
+### Fixed DigitalOcean Deployment Error
+**Date:** October 20, 2025
+
+Fixed critical production deployment issue causing "Internal server error" during user registration:
+
+**Problem:**
+- Users could sign up locally but got 500 errors on DigitalOcean production
+- Missing `JWT_SECRET` environment variable in production
+- Error messages weren't descriptive enough for debugging
+
+**Solution:**
+- Added `JWT_SECRET` to `.do/app.yaml` configuration
+- Improved error logging for development environments
+- Created comprehensive deployment guide (`DEPLOYMENT_GUIDE.md`)
+- JWT_SECRET must be manually set in DigitalOcean App Platform settings
+
+**What to do:**
+1. Generate secure JWT secret: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+2. Add to DigitalOcean: Settings → Environment Variables → Add `JWT_SECRET`
+3. App will auto-redeploy and sign-up will work
+
+See `DEPLOYMENT_GUIDE.md` for detailed instructions.
+
 ### Mobile-Friendly Frontend with OAuth Integration
 **Date:** October 20, 2025
 
@@ -145,27 +168,49 @@ Routes → Controllers → Services → Repositories → Database
 
 ## Environment Variables
 
-Required environment variables:
+### Required for Production
+
+These MUST be set in DigitalOcean App Platform (Settings → Environment Variables):
+
 ```bash
-# Database
-DATABASE_URL=mongodb+srv://...      # MongoDB connection string
+# Authentication (REQUIRED - app won't work without this)
+JWT_SECRET=<64-char-random-hex>    # Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
-# Server
-NODE_ENV=development|production     # Environment
-PORT=5000                          # Server port
+# Database (REQUIRED)
+DATABASE_URL=mongodb+srv://...      # MongoDB connection string from Atlas or DigitalOcean
+```
 
-# JWT Authentication
-JWT_SECRET=your-secret-key         # JWT signing key
-JWT_EXPIRES_IN=7d                  # Token expiration
+### Automatic (Already Configured)
 
-# Google OAuth (Optional)
-GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com  # Google OAuth Client ID
+These are set automatically in `.do/app.yaml`:
 
-# Apple Sign-In (Optional)
+```bash
+NODE_ENV=production                # Environment mode
+PORT=8080                         # Server port (DigitalOcean uses 8080)
+```
+
+### Optional (For OAuth Features)
+
+Only needed if using Google/Apple sign-in:
+
+```bash
+# Google OAuth
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com  # From Google Cloud Console
+
+# Apple Sign-In  
 APPLE_CLIENT_ID=com.yourcompany.app              # Apple Service ID
 APPLE_TEAM_ID=ABC123                             # Apple Team ID
 APPLE_KEY_ID=XYZ789                              # Apple Key ID
 APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY..."    # Apple Private Key (.p8)
+```
+
+### Development Only
+
+These are for local Replit development (stored in Replit Secrets):
+
+```bash
+PORT=5000                          # Replit uses 5000
+NODE_ENV=development               # Development mode
 ```
 
 ## Deployment

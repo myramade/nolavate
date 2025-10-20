@@ -76,6 +76,15 @@ router.post('/register', validateRequest, async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
+    
+    // Return more helpful error in development
+    if (process.env.NODE_ENV === 'development') {
+      return res.status(500).json({ 
+        message: 'Internal server error',
+        error: error.message 
+      });
+    }
+    
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -133,6 +142,15 @@ router.post('/login', validateRequest, async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
+    
+    // Return more helpful error in development
+    if (process.env.NODE_ENV === 'development') {
+      return res.status(500).json({ 
+        message: 'Internal server error',
+        error: error.message 
+      });
+    }
+    
     res.status(500).json({ message: 'Internal server error' });
   }
 });
