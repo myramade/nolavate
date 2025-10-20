@@ -7,6 +7,7 @@ import { notificationService } from '../infrastructure/notification.service.js';
 import { messagingService } from '../infrastructure/messaging.service.js';
 import { storageService } from '../infrastructure/storage.service.js';
 import { avatarService } from '../infrastructure/avatar.service.js';
+import { createUploadMiddleware } from '../infrastructure/upload.service.js';
 
 class Container {
   constructor() {
@@ -17,6 +18,7 @@ class Container {
   initialize() {
     this.services.set('logger', logger);
     this.services.set('roles', ROLES);
+    this.services.set('upload', createUploadMiddleware);
     
     this.services.set('userRepository', userRepository);
     this.services.set('assessmentRepository', assessmentRepository);
@@ -33,6 +35,10 @@ class Container {
       throw new Error(`Service '${name}' not found in container`);
     }
     return this.services.get(name);
+  }
+
+  make(name) {
+    return this.get(name);
   }
 
   register(name, service) {

@@ -1,8 +1,10 @@
 import express from 'express';
-import container from './container.js';
+import { container } from './di/container.js';
+import { config } from './config/env.js';
+import { logger } from './config/logger.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = config.port;
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
