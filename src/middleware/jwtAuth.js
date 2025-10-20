@@ -1,5 +1,6 @@
 
 import jwt from 'jsonwebtoken';
+import { config } from '../config/env.js';
 
 export default function jwtAuth(requiredRole, optional = false, subRole = null) {
   return (req, res, next) => {
@@ -11,7 +12,7 @@ export default function jwtAuth(requiredRole, optional = false, subRole = null) 
     
     if (token) {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const decoded = jwt.verify(token, config.jwt.secret);
         
         // Validate role if required
         if (requiredRole && decoded.role !== requiredRole) {
