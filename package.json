@@ -1,9 +1,13 @@
 {
-  "name": "your-project-name",
+  "name": "culture-forward-api",
   "version": "1.0.0",
   "type": "module",
-  "description": "",
-  "main": "index.js",
+  "description": "Culture Forward API - NodeJS Express.js API for Culture Forward application",
+  "main": "src/index.js",
+  "engines": {
+    "node": "20.x",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
@@ -11,7 +15,7 @@
     "postinstall": "npx prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["api", "culture-forward", "recruitment", "express"],
   "author": "",
   "license": "ISC",
   "dependencies": {
