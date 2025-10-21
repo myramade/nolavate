@@ -5,31 +5,41 @@ The Culture Forward API is a NodeJS Express.js backend for a recruitment and job
 
 ## Recent Changes (October 2025)
 
-### User Profile Photo Upload
+### User Profile Photo and Video Upload
 **Date:** October 21, 2025
 
-Implemented complete profile photo upload functionality for all users:
+Implemented complete profile photo and video upload functionality for all users:
 
 **What works:**
 - ✅ Profile photo upload for both candidates and recruiters
+- ✅ Profile video upload for both candidates and recruiters
 - ✅ Camera button overlay on profile avatar for easy photo selection
-- ✅ Client-side validation (image files only, max 5MB)
+- ✅ Dedicated video upload section with HTML5 player
+- ✅ Client-side validation (images max 5MB, videos max 10MB)
 - ✅ Secure file upload to Supabase storage
-- ✅ Automatic photo display in profile sections
+- ✅ Automatic photo/video display in profile sections
 - ✅ Falls back to initial-based avatar when no photo exists
+- ✅ Falls back to upload prompt when no video exists
 - ✅ Updates localStorage after successful upload
-- ✅ Mobile-friendly circular photo display
+- ✅ Mobile-friendly circular photo display and responsive video player
+- ✅ Can upload photo and video independently or together
 
 **API Endpoints:**
-- `PUT /api/v1/web/profile` - Upload or update user profile photo (multipart/form-data with 'image' field)
+- `PUT /api/v1/web/profile` - Upload or update user profile media (multipart/form-data)
+  - Accepts 'image' field for profile photo
+  - Accepts 'video' field for profile video
+  - Can handle both fields simultaneously or separately
 
 **Technical Details:**
-- Uses Multer middleware for file handling
+- Uses Multer middleware with `.fields()` for multi-file handling
 - Uploads to Supabase 'users' bucket with unique storage paths
-- Returns photo object with streamUrl, downloadUrl, storagePath
+- Returns photo and video objects with streamUrl, downloadUrl, storagePath
+- Photos: category 'PROFILE_PHOTO', max 5MB
+- Videos: category 'PROFILE_VIDEO', max 10MB
 - Graceful database offline handling with 503 responses
 - Validates file type and size on both client and server
 - Consistent UI across candidate and recruiter dashboards
+- HTML5 video player with controls for playback
 
 ### Assessment Feature Fully Working
 **Date:** October 21, 2025
