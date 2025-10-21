@@ -13,6 +13,15 @@ const router = express.Router();
 // Initialize Google OAuth client
 const googleClient = new OAuth2Client();
 
+// Config endpoint - Provides OAuth client IDs to frontend
+router.get('/config', (req, res) => {
+  res.json({
+    googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+    appleClientId: process.env.APPLE_CLIENT_ID || null,
+    appleRedirectUri: `${req.protocol}://${req.get('host')}/auth/apple/callback`
+  });
+});
+
 // Register endpoint
 router.post('/register', validateRequest, async (req, res) => {
   try {

@@ -1,10 +1,32 @@
-// Configuration - Update these with your actual OAuth credentials
-const CONFIG = {
+// Configuration - Fetched dynamically from backend
+let CONFIG = {
   API_URL: window.location.origin,
-  GOOGLE_CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
-  APPLE_CLIENT_ID: 'YOUR_APPLE_CLIENT_ID',
+  GOOGLE_CLIENT_ID: null,
+  APPLE_CLIENT_ID: null,
   APPLE_REDIRECT_URI: window.location.origin + '/auth/apple/callback'
 };
+
+// Fetch OAuth configuration from backend
+async function loadOAuthConfig() {
+  try {
+    const response = await fetch(`${CONFIG.API_URL}/auth/config`);
+    const data = await response.json();
+    
+    CONFIG.GOOGLE_CLIENT_ID = data.googleClientId;
+    CONFIG.APPLE_CLIENT_ID = data.appleClientId;
+    CONFIG.APPLE_REDIRECT_URI = data.appleRedirectUri || CONFIG.APPLE_REDIRECT_URI;
+    
+    console.log('OAuth config loaded:', {
+      hasGoogle: !!CONFIG.GOOGLE_CLIENT_ID,
+      hasApple: !!CONFIG.APPLE_CLIENT_ID
+    });
+    
+    return data;
+  } catch (error) {
+    console.error('Failed to load OAuth config:', error);
+    return null;
+  }
+}
 
 // Utility Functions
 function showNotification(message, type = 'success') {
@@ -251,8 +273,8 @@ if (loginForm) {
 // Google Sign-In Handler
 function triggerGoogleSignIn() {
   // Check if Google client is configured
-  if (!CONFIG.GOOGLE_CLIENT_ID || CONFIG.GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
-    showNotification('Google OAuth is not yet configured. Please ask the administrator to set up GOOGLE_CLIENT_ID.', 'error');
+  if (!CONFIG.GOOGLE_CLIENT_ID) {
+    showNotification('Google Sign-In is not configured. Please contact support.', 'error');
     return;
   }
   
@@ -298,8 +320,8 @@ async function handleGoogleSignIn(response) {
 // Apple Sign-In Handler
 async function handleAppleSignIn() {
   // Check if Apple client is configured
-  if (!CONFIG.APPLE_CLIENT_ID || CONFIG.APPLE_CLIENT_ID === 'YOUR_APPLE_CLIENT_ID') {
-    showNotification('Apple Sign-In is not yet configured. Please ask the administrator to set up APPLE_CLIENT_ID.', 'error');
+  if (!CONFIG.APPLE_CLIENT_ID) {
+    showNotification('Apple Sign-In is not configured. Please contact support.', 'error');
     return;
   }
   
@@ -351,8 +373,8 @@ document.querySelectorAll('input').forEach(input => {
   });
 });
 
-// Initialize Apple Sign-In SDK on page load
-window.addEventListener('DOMContentLoaded', () => {
+// Initialize OAuth SDKs on page load
+window.addEventListener('DOMContentLoaded', async () => {
   // Check if user is already logged in
   const accessToken = localStorage.getItem('accessToken');
   if (accessToken && (window.location.pathname === '/' || window.location.pathname === '/index.html' || window.location.pathname === '/login.html')) {
@@ -361,8 +383,26 @@ window.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+  // Load OAuth configuration from backend
+  await loadOAuthConfig();
+
+  // Initialize Google Sign-In if credentials are configured
+  if (CONFIG.GOOGLE_CLIENT_ID && typeof google !== 'undefined') {
+    try {
+      google.accounts.id.initialize({
+        client_id: CONFIG.GOOGLE_CLIENT_ID,
+        callback: handleGoogleSignIn,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+      console.log('Google Sign-In SDK initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Google Sign-In:', error);
+    }
+  }
+
   // Initialize Apple Sign-In if credentials are configured
-  if (CONFIG.APPLE_CLIENT_ID && CONFIG.APPLE_CLIENT_ID !== 'YOUR_APPLE_CLIENT_ID' && typeof AppleID !== 'undefined') {
+  if (CONFIG.APPLE_CLIENT_ID && typeof AppleID !== 'undefined') {
     try {
       AppleID.auth.init({
         clientId: CONFIG.APPLE_CLIENT_ID,
