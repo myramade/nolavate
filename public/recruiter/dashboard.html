@@ -204,57 +204,146 @@
     }
 
     // Load Profile
-    function loadProfile() {
-      document.getElementById('profileContainer').innerHTML = `
-        <div style="max-width: 600px; margin: 0 auto;">
-          <div style="text-align: center; margin-bottom: 32px;">
-            <div class="match-avatar" style="width: 100px; height: 100px; font-size: 40px; margin: 0 auto 16px; background: ${getAvatarColor(user.name)}">
-              ${getInitials(user.name)}
+    async function loadProfile() {
+      showLoading('profileContainer');
+      
+      try {
+        const companyResponse = await apiCall('/api/v1/web/company/me');
+        const company = companyResponse?.data;
+        
+        document.getElementById('profileContainer').innerHTML = `
+          <div style="max-width: 800px; margin: 0 auto;">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <div class="match-avatar" style="width: 100px; height: 100px; font-size: 40px; margin: 0 auto 16px; background: ${getAvatarColor(user.name)}">
+                ${getInitials(user.name)}
+              </div>
+              <h2>${user.name}</h2>
+              <p style="color: var(--text-light);">${user.email}</p>
             </div>
-            <h2>${user.name}</h2>
-            <p style="color: var(--text-light);">${user.email}</p>
-          </div>
-          
-          <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-            <h3 style="margin-bottom: 16px;">Account Information</h3>
-            <div style="display: grid; gap: 12px;">
-              <div>
-                <label style="color: var(--text-light); font-size: 14px;">Full Name</label>
-                <p style="margin-top: 4px;">${user.name}</p>
-              </div>
-              <div>
-                <label style="color: var(--text-light); font-size: 14px;">Email</label>
-                <p style="margin-top: 4px;">${user.email}</p>
-              </div>
-              <div>
-                <label style="color: var(--text-light); font-size: 14px;">Role</label>
-                <p style="margin-top: 4px;">Recruiter</p>
-              </div>
-            </div>
-          </div>
-          
-          <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-            <h3 style="margin-bottom: 12px;">Quick Stats</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; text-align: center;">
-              <div>
-                <div style="font-size: 32px; font-weight: 700; color: var(--primary-color);" id="jobCount">-</div>
-                <div style="color: var(--text-light); font-size: 14px;">Posted Jobs</div>
-              </div>
-              <div>
-                <div style="font-size: 32px; font-weight: 700; color: var(--success-color);" id="matchCount">-</div>
-                <div style="color: var(--text-light); font-size: 14px;">Matches</div>
+            
+            <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h3 style="margin-bottom: 16px;">Account Information</h3>
+              <div style="display: grid; gap: 12px;">
+                <div>
+                  <label style="color: var(--text-light); font-size: 14px;">Full Name</label>
+                  <p style="margin-top: 4px;">${user.name}</p>
+                </div>
+                <div>
+                  <label style="color: var(--text-light); font-size: 14px;">Email</label>
+                  <p style="margin-top: 4px;">${user.email}</p>
+                </div>
+                <div>
+                  <label style="color: var(--text-light); font-size: 14px;">Role</label>
+                  <p style="margin-top: 4px;">Recruiter</p>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div style="text-align: center;">
-            <button class="btn btn-danger" onclick="logout()">Sign Out</button>
-          </div>
-        </div>
-      `;
 
-      // Load stats
-      loadStats();
+            <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0;">Company Profile</h3>
+                ${company ? `<button class="btn btn-secondary" onclick="editCompany()">Edit</button>` : ''}
+              </div>
+              
+              ${company ? `
+                <div style="display: grid; gap: 16px;">
+                  ${company.logo ? `
+                    <div style="text-align: center;">
+                      <img src="${company.logo}" alt="${company.name}" style="max-width: 120px; max-height: 120px; border-radius: 8px; object-fit: contain;">
+                    </div>
+                  ` : ''}
+                  
+                  <div>
+                    <label style="color: var(--text-light); font-size: 14px;">Company Name</label>
+                    <p style="margin-top: 4px; font-weight: 600;">${company.name || 'N/A'}</p>
+                  </div>
+                  
+                  ${company.website ? `
+                    <div>
+                      <label style="color: var(--text-light); font-size: 14px;">Website</label>
+                      <p style="margin-top: 4px;"><a href="${company.website}" target="_blank" style="color: var(--primary-color);">${company.website}</a></p>
+                    </div>
+                  ` : ''}
+                  
+                  ${company.industry ? `
+                    <div>
+                      <label style="color: var(--text-light); font-size: 14px;">Industry</label>
+                      <p style="margin-top: 4px;">${company.industry}</p>
+                    </div>
+                  ` : ''}
+                  
+                  ${company.description ? `
+                    <div>
+                      <label style="color: var(--text-light); font-size: 14px;">Description</label>
+                      <p style="margin-top: 4px;">${company.description}</p>
+                    </div>
+                  ` : ''}
+                  
+                  ${company.location && company.location.length > 0 ? `
+                    <div>
+                      <label style="color: var(--text-light); font-size: 14px;">Location</label>
+                      <p style="margin-top: 4px;">${company.location.join(', ')}</p>
+                    </div>
+                  ` : ''}
+                  
+                  ${company.numOfEmployees ? `
+                    <div>
+                      <label style="color: var(--text-light); font-size: 14px;">Number of Employees</label>
+                      <p style="margin-top: 4px;">${company.numOfEmployees}</p>
+                    </div>
+                  ` : ''}
+                  
+                  ${company.techStacks && company.techStacks.length > 0 ? `
+                    <div>
+                      <label style="color: var(--text-light); font-size: 14px;">Tech Stack</label>
+                      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+                        ${company.techStacks.map(tech => `<span class="meta-tag">${tech}</span>`).join('')}
+                      </div>
+                    </div>
+                  ` : ''}
+                  
+                  ${company.culture ? `
+                    <div>
+                      <label style="color: var(--text-light); font-size: 14px;">Company Culture</label>
+                      <p style="margin-top: 4px;">${company.culture}</p>
+                    </div>
+                  ` : ''}
+                </div>
+              ` : `
+                <div style="text-align: center; padding: 40px 20px;">
+                  <div style="font-size: 48px; margin-bottom: 16px;">🏢</div>
+                  <h4 style="margin-bottom: 8px;">No Company Profile Yet</h4>
+                  <p style="color: var(--text-light); margin-bottom: 20px;">Create your company profile to start posting jobs and attracting talent</p>
+                  <button class="btn btn-primary" onclick="createCompany()">Create Company Profile</button>
+                </div>
+              `}
+            </div>
+            
+            <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h3 style="margin-bottom: 12px;">Quick Stats</h3>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; text-align: center;">
+                <div>
+                  <div style="font-size: 32px; font-weight: 700; color: var(--primary-color);" id="jobCount">-</div>
+                  <div style="color: var(--text-light); font-size: 14px;">Posted Jobs</div>
+                </div>
+                <div>
+                  <div style="font-size: 32px; font-weight: 700; color: var(--success-color);" id="matchCount">-</div>
+                  <div style="color: var(--text-light); font-size: 14px;">Matches</div>
+                </div>
+              </div>
+            </div>
+            
+            <div style="text-align: center;">
+              <button class="btn btn-danger" onclick="logout()">Sign Out</button>
+            </div>
+          </div>
+        `;
+
+        // Load stats
+        loadStats();
+      } catch (error) {
+        showError('profileContainer', error.message);
+      }
     }
 
     // Load stats for profile
@@ -270,6 +359,16 @@
       } catch (error) {
         console.error('Failed to load stats:', error);
       }
+    }
+
+    // Create company profile (placeholder)
+    function createCompany() {
+      showNotification('Company creation requires uploading a logo and detailed information. This feature will be implemented soon.', 'info');
+    }
+
+    // Edit company profile (placeholder)
+    function editCompany() {
+      showNotification('Company editing requires API integration with file uploads. This feature will be implemented soon.', 'info');
     }
 
     // Initialize - load jobs by default
