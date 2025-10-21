@@ -3,84 +3,343 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Culture Forward - Dashboard</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .dashboard {
-      background: white;
-      border-radius: 16px;
-      padding: 40px;
-      max-width: 600px;
-      width: 100%;
-      text-align: center;
-    }
-    h1 {
-      color: #1a1a1a;
-      margin-bottom: 16px;
-    }
-    .user-info {
-      background: #f5f7fa;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 24px 0;
-    }
-    button {
-      background: #4285f4;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 600;
-    }
-    button:hover {
-      background: #3367d6;
-    }
-  </style>
+  <title>Culture Forward - Candidate Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
-  <div class="dashboard">
-    <h1>Welcome to Culture Forward!</h1>
-    <p>Your candidate dashboard</p>
-    <div class="user-info" id="userInfo">
-      <p>Loading user information...</p>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+      <div class="header-left">
+        <h1 id="welcomeMessage">Welcome back!</h1>
+        <p>Find your perfect cultural match</p>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-secondary" onclick="logout()">Sign Out</button>
+      </div>
     </div>
-    <button onclick="logout()">Sign Out</button>
+
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <div class="tab-buttons">
+        <button class="tab-button active" data-tab="jobs" onclick="switchTab('jobs')">Browse Jobs</button>
+        <button class="tab-button" data-tab="matches" onclick="switchTab('matches')">My Matches</button>
+        <button class="tab-button" data-tab="assessment" onclick="switchTab('assessment')">Assessment</button>
+        <button class="tab-button" data-tab="profile" onclick="switchTab('profile')">Profile</button>
+      </div>
+    </div>
+
+    <!-- Jobs Tab -->
+    <div id="tab-jobs" class="tab-content active">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Available Positions</h2>
+        </div>
+        <div id="jobsContainer"></div>
+      </div>
+    </div>
+
+    <!-- Matches Tab -->
+    <div id="tab-matches" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Your Job Matches</h2>
+        </div>
+        <div id="matchesContainer"></div>
+      </div>
+    </div>
+
+    <!-- Assessment Tab -->
+    <div id="tab-assessment" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Personality Assessment</h2>
+        </div>
+        <div id="assessmentContainer"></div>
+      </div>
+    </div>
+
+    <!-- Profile Tab -->
+    <div id="tab-profile" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Your Profile</h2>
+        </div>
+        <div id="profileContainer"></div>
+      </div>
+    </div>
   </div>
 
+  <!-- Notification -->
+  <div id="notification" class="notification"></div>
+
+  <script src="/js/dashboard.js"></script>
   <script>
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userInfoEl = document.getElementById('userInfo');
-    
-    if (user.email) {
-      userInfoEl.innerHTML = `
-        <h3>${user.name || 'User'}</h3>
-        <p>${user.email}</p>
-        <p>Role: ${user.roleSubtype || 'Candidate'}</p>
-      `;
-    } else {
-      window.location.href = '/index.html';
+    // Initialize
+    const user = getUser();
+    document.getElementById('welcomeMessage').textContent = `Welcome back, ${user.name}!`;
+
+    // Load Jobs
+    async function loadJobs() {
+      showLoading('jobsContainer');
+      try {
+        const response = await apiCall('/api/v1/posts?page=0&pageSize=20');
+        if (!response || !response.data || response.data.length === 0) {
+          showEmptyState('jobsContainer', '💼', 'No jobs available', 'Check back later for new opportunities');
+          return;
+        }
+
+        document.getElementById('jobsContainer').innerHTML = `
+          <div class="grid grid-3">
+            ${response.data.map(job => `
+              <div class="job-card" onclick="viewJob('${job.id}')">
+                <div class="job-header">
+                  <div class="company-logo" style="background: ${getAvatarColor(job.company?.name || 'Company')}">
+                    ${getInitials(job.company?.name || 'Company')}
+                  </div>
+                  <div class="job-info">
+                    <h3>${job.positionTitle || job.title || 'Position'}</h3>
+                    <p class="company-name">${job.company?.name || 'Company'}</p>
+                  </div>
+                </div>
+                <div class="job-meta">
+                  ${job.location ? `<span class="meta-tag">📍 ${job.location}</span>` : ''}
+                  ${job.employmentType ? `<span class="meta-tag">${job.employmentType}</span>` : ''}
+                  ${job.experience ? `<span class="meta-tag">${job.experience}</span>` : ''}
+                </div>
+                <p class="job-description">${job.description || 'No description available'}</p>
+                <div class="job-footer">
+                  <span class="salary">${formatSalary(job.compensation)}</span>
+                  <span class="meta-tag">${formatDate(job.createdTime)}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (error) {
+        showError('jobsContainer', error.message);
+      }
     }
 
-    function logout() {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login.html';
+    // View job details
+    function viewJob(jobId) {
+      showNotification('Opening job details...', 'success');
+      // In a real app, this would open a modal or navigate to job details page
     }
+
+    // Load Matches
+    async function loadMatches() {
+      showLoading('matchesContainer');
+      try {
+        const response = await apiCall('/api/v1/matches/me?page=0&pageSize=20');
+        if (!response || !response.data || response.data.length === 0) {
+          showEmptyState('matchesContainer', '🎯', 'No matches yet', 'Complete your assessment to get matched with opportunities', 'Take Assessment', 'switchTab("assessment")');
+          return;
+        }
+
+        document.getElementById('matchesContainer').innerHTML = `
+          <div class="grid grid-2">
+            ${response.data.map(match => `
+              <div class="match-card">
+                <div class="match-avatar" style="background: ${getAvatarColor(match.post?.company?.name || 'Match')}">
+                  ${getInitials(match.post?.company?.name || 'Match')}
+                </div>
+                <div class="match-info">
+                  <h3>${match.post?.positionTitle || match.post?.title || 'Position'}</h3>
+                  <p>${match.post?.company?.name || 'Company'}</p>
+                  <p>${match.post?.location || 'Location not specified'}</p>
+                  <span class="match-score">✨ ${match.matchScore || '90'}% Match</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (error) {
+        showError('matchesContainer', error.message);
+      }
+    }
+
+    // Load Assessment
+    async function loadAssessment() {
+      showLoading('assessmentContainer');
+      try {
+        // First check if user has already taken assessment
+        const resultsResponse = await apiCall('/api/v1/assessment/results');
+        
+        if (resultsResponse && resultsResponse.data) {
+          // User has taken assessment - show results
+          const result = resultsResponse.data;
+          document.getElementById('assessmentContainer').innerHTML = `
+            <div style="max-width: 700px; margin: 0 auto;">
+              <div style="text-align: center; margin-bottom: 32px;">
+                <div style="width: 100px; height: 100px; margin: 0 auto 16px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 48px;">✓</div>
+                <h2>${result.personality?.title || 'Your Personality Type'}</h2>
+                <p style="color: var(--text-light); margin-top: 8px;">Completed on ${result.takenAt || formatDate(result.createdTime)}</p>
+              </div>
+              
+              <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 12px;">About You</h3>
+                <p style="color: var(--text-light); line-height: 1.6;">${result.personality?.detail || 'Your personality profile is being generated...'}</p>
+              </div>
+              
+              ${result.personality?.strengths ? `
+                <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                  <h3 style="margin-bottom: 12px;">Your Strengths</h3>
+                  <ul style="color: var(--text-light); line-height: 1.8; padding-left: 20px;">
+                    ${result.personality.strengths.map(s => `<li>${s}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              
+              ${result.personality?.recommendedJobs ? `
+                <div style="background: var(--bg-light); padding: 20px; border-radius: 12px;">
+                  <h3 style="margin-bottom: 12px;">Recommended Careers</h3>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    ${result.personality.recommendedJobs.map(job => `
+                      <span class="meta-tag">${job}</span>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+              
+              <div style="text-align: center; margin-top: 32px;">
+                <button class="btn btn-secondary" onclick="retakeAssessment()">Retake Assessment</button>
+              </div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        // Check if this is a 404 (user hasn't taken assessment) or a real error
+        if (error.status === 404 || error.statusCode === 404 || error.message.includes('not taken')) {
+          // User hasn't taken assessment yet - show assessment form
+          loadAssessmentQuestions();
+        } else {
+          // Real error - show error state
+          showError('assessmentContainer', error.message || 'Failed to load assessment. Please try again.');
+        }
+      }
+    }
+
+    // Load assessment questions
+    async function loadAssessmentQuestions() {
+      try {
+        const response = await apiCall('/api/v1/assessment/questions');
+        if (!response || !response.data) {
+          showError('assessmentContainer', 'Failed to load assessment questions');
+          return;
+        }
+
+        const questions = response.data;
+        let currentQuestion = 0;
+        const answers = [];
+
+        function renderQuestion() {
+          const q = questions[currentQuestion];
+          document.getElementById('assessmentContainer').innerHTML = `
+            <div style="max-width: 700px; margin: 0 auto;">
+              <div style="text-align: center; margin-bottom: 32px;">
+                <p style="color: var(--text-light); margin-bottom: 8px;">Question ${currentQuestion + 1} of ${questions.length}</p>
+                <div style="background: var(--border-color); height: 8px; border-radius: 4px; overflow: hidden;">
+                  <div style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); height: 100%; width: ${((currentQuestion + 1) / questions.length) * 100}%; transition: width 0.3s ease;"></div>
+                </div>
+              </div>
+              
+              <h2 style="text-align: center; margin-bottom: 32px; font-size: 20px;">${q.question}</h2>
+              
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                ${q.answers.map((answer, idx) => `
+                  <button class="btn btn-secondary" style="padding: 20px; text-align: left; font-size: 15px;" onclick="selectAnswer(${idx}, '${answer.id}')">
+                    ${answer.text}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        window.selectAnswer = (index, answerId) => {
+          answers.push({
+            questionId: questions[currentQuestion].id,
+            answerId: answerId
+          });
+          
+          currentQuestion++;
+          
+          if (currentQuestion < questions.length) {
+            renderQuestion();
+          } else {
+            submitAssessment(answers);
+          }
+        };
+
+        renderQuestion();
+      } catch (error) {
+        showError('assessmentContainer', error.message);
+      }
+    }
+
+    // Submit assessment
+    async function submitAssessment(answers) {
+      showLoading('assessmentContainer');
+      try {
+        await apiCall('/api/v1/assessment/submit', {
+          method: 'POST',
+          body: JSON.stringify({ response: answers })
+        });
+        
+        showNotification('Assessment submitted! Your profile is being analyzed...', 'success');
+        setTimeout(() => loadAssessment(), 2000);
+      } catch (error) {
+        showError('assessmentContainer', error.message);
+      }
+    }
+
+    // Retake assessment
+    function retakeAssessment() {
+      if (confirm('Are you sure you want to retake the assessment? This will replace your current results.')) {
+        loadAssessmentQuestions();
+      }
+    }
+
+    // Load Profile
+    function loadProfile() {
+      document.getElementById('profileContainer').innerHTML = `
+        <div style="max-width: 600px; margin: 0 auto;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <div class="match-avatar" style="width: 100px; height: 100px; font-size: 40px; margin: 0 auto 16px; background: ${getAvatarColor(user.name)}">
+              ${getInitials(user.name)}
+            </div>
+            <h2>${user.name}</h2>
+            <p style="color: var(--text-light);">${user.email}</p>
+          </div>
+          
+          <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="margin-bottom: 16px;">Account Information</h3>
+            <div style="display: grid; gap: 12px;">
+              <div>
+                <label style="color: var(--text-light); font-size: 14px;">Full Name</label>
+                <p style="margin-top: 4px;">${user.name}</p>
+              </div>
+              <div>
+                <label style="color: var(--text-light); font-size: 14px;">Email</label>
+                <p style="margin-top: 4px;">${user.email}</p>
+              </div>
+              <div>
+                <label style="color: var(--text-light); font-size: 14px;">Role</label>
+                <p style="margin-top: 4px;">Job Seeker</p>
+              </div>
+            </div>
+          </div>
+          
+          <div style="text-align: center;">
+            <button class="btn btn-danger" onclick="logout()">Sign Out</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Initialize - load jobs by default
+    loadJobs();
   </script>
 </body>
 </html>

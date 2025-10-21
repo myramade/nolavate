@@ -4,83 +4,276 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Culture Forward - Recruiter Dashboard</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .dashboard {
-      background: white;
-      border-radius: 16px;
-      padding: 40px;
-      max-width: 600px;
-      width: 100%;
-      text-align: center;
-    }
-    h1 {
-      color: #1a1a1a;
-      margin-bottom: 16px;
-    }
-    .user-info {
-      background: #f5f7fa;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 24px 0;
-    }
-    button {
-      background: #4285f4;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 600;
-    }
-    button:hover {
-      background: #3367d6;
-    }
-  </style>
+  <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
-  <div class="dashboard">
-    <h1>Welcome to Culture Forward!</h1>
-    <p>Your recruiter dashboard</p>
-    <div class="user-info" id="userInfo">
-      <p>Loading user information...</p>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+      <div class="header-left">
+        <h1 id="welcomeMessage">Welcome back!</h1>
+        <p>Find the perfect cultural fit for your team</p>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-secondary" onclick="logout()">Sign Out</button>
+      </div>
     </div>
-    <button onclick="logout()">Sign Out</button>
+
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <div class="tab-buttons">
+        <button class="tab-button active" data-tab="jobs" onclick="switchTab('jobs')">My Jobs</button>
+        <button class="tab-button" data-tab="candidates" onclick="switchTab('candidates')">Candidates</button>
+        <button class="tab-button" data-tab="matches" onclick="switchTab('matches')">Matches</button>
+        <button class="tab-button" data-tab="profile" onclick="switchTab('profile')">Profile</button>
+      </div>
+    </div>
+
+    <!-- Jobs Tab -->
+    <div id="tab-jobs" class="tab-content active">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Posted Jobs</h2>
+          <button class="btn btn-primary" onclick="showCreateJobInfo()">+ Post New Job</button>
+        </div>
+        <div id="jobsContainer"></div>
+      </div>
+    </div>
+
+    <!-- Candidates Tab -->
+    <div id="tab-candidates" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Candidate Prospects</h2>
+        </div>
+        <div id="candidatesContainer"></div>
+      </div>
+    </div>
+
+    <!-- Matches Tab -->
+    <div id="tab-matches" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Matched Candidates</h2>
+        </div>
+        <div id="matchesContainer"></div>
+      </div>
+    </div>
+
+    <!-- Profile Tab -->
+    <div id="tab-profile" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Your Profile</h2>
+        </div>
+        <div id="profileContainer"></div>
+      </div>
+    </div>
   </div>
 
+  <!-- Notification -->
+  <div id="notification" class="notification"></div>
+
+  <script src="/js/dashboard.js"></script>
   <script>
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userInfoEl = document.getElementById('userInfo');
-    
-    if (user.email) {
-      userInfoEl.innerHTML = `
-        <h3>${user.name || 'User'}</h3>
-        <p>${user.email}</p>
-        <p>Role: ${user.roleSubtype || 'Recruiter'}</p>
-      `;
-    } else {
-      window.location.href = '/index.html';
+    // Initialize
+    const user = getUser();
+    document.getElementById('welcomeMessage').textContent = `Welcome back, ${user.name}!`;
+
+    // Load Posted Jobs
+    async function loadJobs() {
+      showLoading('jobsContainer');
+      try {
+        const response = await apiCall('/api/v1/posts?page=0&pageSize=20');
+        if (!response || !response.data || response.data.length === 0) {
+          showEmptyState('jobsContainer', '💼', 'No jobs posted yet', 'Create your first job posting to start finding candidates', 'Post a Job', 'showCreateJobInfo()');
+          return;
+        }
+
+        document.getElementById('jobsContainer').innerHTML = `
+          <div class="grid grid-3">
+            ${response.data.map(job => `
+              <div class="job-card">
+                <div class="job-header">
+                  <div class="company-logo" style="background: ${getAvatarColor(job.company?.name || 'Company')}">
+                    ${getInitials(job.company?.name || 'Company')}
+                  </div>
+                  <div class="job-info">
+                    <h3>${job.positionTitle || job.title || 'Position'}</h3>
+                    <p class="company-name">${job.company?.name || 'Your Company'}</p>
+                  </div>
+                </div>
+                <div class="job-meta">
+                  ${job.location ? `<span class="meta-tag">📍 ${job.location}</span>` : ''}
+                  ${job.employmentType ? `<span class="meta-tag">${job.employmentType}</span>` : ''}
+                  <span class="meta-tag">👁️ ${job.views || 0} views</span>
+                  <span class="meta-tag">❤️ ${job.likes || 0} likes</span>
+                </div>
+                <p class="job-description">${job.description || 'No description available'}</p>
+                <div class="job-footer">
+                  <span class="salary">${formatSalary(job.compensation)}</span>
+                  <span class="meta-tag">${formatDate(job.createdTime)}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (error) {
+        showError('jobsContainer', error.message);
+      }
     }
 
-    function logout() {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login.html';
+    // Show create job info (API requires video upload)
+    function showCreateJobInfo() {
+      showNotification('Job creation requires video upload and is best done through the API. Check the API documentation for /api/v1/posts/create', 'error');
     }
+
+    // Load Candidate Prospects
+    async function loadCandidates() {
+      showLoading('candidatesContainer');
+      try {
+        const response = await apiCall('/api/v1/prospects?page=0&pageSize=20');
+        if (!response || !response.data || response.data.length === 0) {
+          showEmptyState('candidatesContainer', '👥', 'No candidates available', 'Post jobs to start receiving candidate matches');
+          return;
+        }
+
+        document.getElementById('candidatesContainer').innerHTML = `
+          <div class="grid grid-2">
+            ${response.data.map(candidate => `
+              <div class="match-card">
+                <div class="match-avatar" style="background: ${getAvatarColor(candidate.name || 'Candidate')}">
+                  ${getInitials(candidate.name || 'Candidate')}
+                </div>
+                <div class="match-info">
+                  <h3>${candidate.name || 'Candidate'}</h3>
+                  <p>${candidate.employmentTitle || 'Job Seeker'}</p>
+                  ${candidate.personality ? `<p style="font-size: 13px; color: var(--primary-color);">🎯 ${candidate.personality.title}</p>` : ''}
+                  ${candidate.skills && candidate.skills.length > 0 ? `
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+                      ${candidate.skills.slice(0, 3).map(skill => `<span class="meta-tag">${skill}</span>`).join('')}
+                      ${candidate.skills.length > 3 ? `<span class="meta-tag">+${candidate.skills.length - 3} more</span>` : ''}
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (error) {
+        showError('candidatesContainer', error.message);
+      }
+    }
+
+    // Load Matches
+    async function loadMatches() {
+      showLoading('matchesContainer');
+      try {
+        const response = await apiCall('/api/v1/matches/me?page=0&pageSize=20');
+        if (!response || !response.data || response.data.length === 0) {
+          showEmptyState('matchesContainer', '🎯', 'No matches yet', 'Matches will appear here when candidates show interest in your job postings');
+          return;
+        }
+
+        document.getElementById('matchesContainer').innerHTML = `
+          <div class="grid grid-2">
+            ${response.data.map(match => `
+              <div class="match-card">
+                <div class="match-avatar" style="background: ${getAvatarColor(match.candidate?.name || 'Candidate')}">
+                  ${getInitials(match.candidate?.name || 'Candidate')}
+                </div>
+                <div class="match-info">
+                  <h3>${match.candidate?.name || 'Candidate'}</h3>
+                  <p>${match.candidate?.employmentTitle || 'Job Seeker'}</p>
+                  <p style="font-size: 13px; color: var(--text-light);">For: ${match.post?.positionTitle || match.post?.title || 'Position'}</p>
+                  ${match.candidate?.personality ? `<p style="font-size: 13px; color: var(--primary-color); margin-top: 4px;">🎯 ${match.candidate.personality.title}</p>` : ''}
+                  <span class="match-score">✨ ${match.matchScore || '90'}% Match</span>
+                  ${match.candidate?.skills && match.candidate.skills.length > 0 ? `
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+                      ${match.candidate.skills.slice(0, 3).map(skill => `<span class="meta-tag">${skill}</span>`).join('')}
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (error) {
+        showError('matchesContainer', error.message);
+      }
+    }
+
+    // Load Profile
+    function loadProfile() {
+      document.getElementById('profileContainer').innerHTML = `
+        <div style="max-width: 600px; margin: 0 auto;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <div class="match-avatar" style="width: 100px; height: 100px; font-size: 40px; margin: 0 auto 16px; background: ${getAvatarColor(user.name)}">
+              ${getInitials(user.name)}
+            </div>
+            <h2>${user.name}</h2>
+            <p style="color: var(--text-light);">${user.email}</p>
+          </div>
+          
+          <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="margin-bottom: 16px;">Account Information</h3>
+            <div style="display: grid; gap: 12px;">
+              <div>
+                <label style="color: var(--text-light); font-size: 14px;">Full Name</label>
+                <p style="margin-top: 4px;">${user.name}</p>
+              </div>
+              <div>
+                <label style="color: var(--text-light); font-size: 14px;">Email</label>
+                <p style="margin-top: 4px;">${user.email}</p>
+              </div>
+              <div>
+                <label style="color: var(--text-light); font-size: 14px;">Role</label>
+                <p style="margin-top: 4px;">Recruiter</p>
+              </div>
+            </div>
+          </div>
+          
+          <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="margin-bottom: 12px;">Quick Stats</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; text-align: center;">
+              <div>
+                <div style="font-size: 32px; font-weight: 700; color: var(--primary-color);" id="jobCount">-</div>
+                <div style="color: var(--text-light); font-size: 14px;">Posted Jobs</div>
+              </div>
+              <div>
+                <div style="font-size: 32px; font-weight: 700; color: var(--success-color);" id="matchCount">-</div>
+                <div style="color: var(--text-light); font-size: 14px;">Matches</div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="text-align: center;">
+            <button class="btn btn-danger" onclick="logout()">Sign Out</button>
+          </div>
+        </div>
+      `;
+
+      // Load stats
+      loadStats();
+    }
+
+    // Load stats for profile
+    async function loadStats() {
+      try {
+        const [jobsResponse, matchesResponse] = await Promise.all([
+          apiCall('/api/v1/posts?page=0&pageSize=100'),
+          apiCall('/api/v1/matches/me?page=0&pageSize=100')
+        ]);
+
+        document.getElementById('jobCount').textContent = jobsResponse?.data?.length || 0;
+        document.getElementById('matchCount').textContent = matchesResponse?.data?.length || 0;
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+      }
+    }
+
+    // Initialize - load jobs by default
+    loadJobs();
   </script>
 </body>
 </html>
