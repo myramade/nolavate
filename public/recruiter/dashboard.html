@@ -123,9 +123,236 @@
       }
     }
 
-    // Show create job info (API requires video upload)
+    // Show create job form
     function showCreateJobInfo() {
-      showNotification('Job creation requires video upload and is best done through the API. Check the API documentation for /api/v1/posts/create', 'error');
+      document.getElementById('jobsContainer').innerHTML = `
+        <div style="max-width: 700px; margin: 0 auto;">
+          <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+            <button class="btn btn-secondary" onclick="loadJobs()">← Back to Jobs</button>
+            <button class="btn btn-secondary" onclick="showImportJobForm()">Import from URL</button>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Create New Job Posting</h2>
+            </div>
+            
+            <form id="createJobForm" style="padding: 24px;">
+              <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Position Title *</label>
+                <input type="text" id="positionTitle" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Job Description *</label>
+                <textarea id="description" required rows="6" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; resize: vertical;"></textarea>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div>
+                  <label style="display: block; margin-bottom: 8px; font-weight: 600;">Location</label>
+                  <input type="text" id="location" placeholder="e.g., San Francisco, CA" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+                </div>
+
+                <div>
+                  <label style="display: block; margin-bottom: 8px; font-weight: 600;">Employment Type</label>
+                  <select id="employmentType" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+                    <option value="">Select type</option>
+                    <option value="FULL_TIME">Full Time</option>
+                    <option value="PART_TIME">Part Time</option>
+                    <option value="CONTRACT">Contract</option>
+                    <option value="INTERNSHIP">Internship</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div>
+                  <label style="display: block; margin-bottom: 8px; font-weight: 600;">Min Salary (USD)</label>
+                  <input type="number" id="minSalary" placeholder="e.g., 80000" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+                </div>
+
+                <div>
+                  <label style="display: block; margin-bottom: 8px; font-weight: 600;">Max Salary (USD)</label>
+                  <input type="number" id="maxSalary" placeholder="e.g., 120000" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+                </div>
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Required Skills</label>
+                <input type="text" id="requiredSkills" placeholder="Comma-separated, e.g., JavaScript, React, Node.js" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+                <small style="color: var(--text-light); font-size: 13px;">Enter up to 4 required skills, separated by commas</small>
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Optional Skills</label>
+                <input type="text" id="optionalSkills" placeholder="Comma-separated, e.g., TypeScript, AWS, Docker" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+                <small style="color: var(--text-light); font-size: 13px;">Enter up to 4 optional skills, separated by commas</small>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div>
+                  <label style="display: block; margin-bottom: 8px; font-weight: 600;">Experience Level</label>
+                  <select id="experienceLevel" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+                    <option value="">Select level</option>
+                    <option value="Entry">Entry Level</option>
+                    <option value="Mid">Mid Level</option>
+                    <option value="Senior">Senior</option>
+                    <option value="Lead">Lead</option>
+                    <option value="Executive">Executive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style="display: block; margin-bottom: 8px; font-weight: 600;">Education Level</label>
+                  <select id="educationLevel" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+                    <option value="">Select level</option>
+                    <option value="High School">High School</option>
+                    <option value="Associate">Associate Degree</option>
+                    <option value="Bachelor">Bachelor's Degree</option>
+                    <option value="Master">Master's Degree</option>
+                    <option value="PhD">PhD</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Benefits</label>
+                <input type="text" id="benefits" placeholder="Comma-separated, e.g., Health Insurance, 401k, Remote Work" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Application URL</label>
+                <input type="url" id="applicationUrl" placeholder="https://yourcompany.com/apply" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+              </div>
+
+              <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="loadJobs()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Job Posting</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('createJobForm').addEventListener('submit', handleCreateJob);
+    }
+
+    // Handle create job form submission
+    async function handleCreateJob(e) {
+      e.preventDefault();
+      
+      const formData = {
+        positionTitle: document.getElementById('positionTitle').value.trim(),
+        description: document.getElementById('description').value.trim(),
+        location: document.getElementById('location').value.trim(),
+        employmentType: document.getElementById('employmentType').value,
+        minSalary: document.getElementById('minSalary').value,
+        maxSalary: document.getElementById('maxSalary').value,
+        currency: 'USD',
+        requiredSkills: document.getElementById('requiredSkills').value.trim(),
+        optionalSkills: document.getElementById('optionalSkills').value.trim(),
+        experienceLevel: document.getElementById('experienceLevel').value,
+        educationLevel: document.getElementById('educationLevel').value,
+        benefits: document.getElementById('benefits').value.trim(),
+        applicationUrl: document.getElementById('applicationUrl').value.trim(),
+      };
+
+      try {
+        showLoading('jobsContainer');
+        await apiCall('/api/v1/posts/create-simple', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        showNotification('Job posted successfully!', 'success');
+        loadJobs();
+      } catch (error) {
+        showNotification(error.message || 'Failed to create job posting', 'error');
+        showCreateJobInfo();
+      }
+    }
+
+    // Show import job form
+    function showImportJobForm() {
+      document.getElementById('jobsContainer').innerHTML = `
+        <div style="max-width: 600px; margin: 0 auto;">
+          <div style="margin-bottom: 24px;">
+            <button class="btn btn-secondary" onclick="showCreateJobInfo()">← Back to Create Form</button>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Import Job from URL</h2>
+            </div>
+            
+            <div style="padding: 24px;">
+              <p style="margin-bottom: 20px; color: var(--text-light);">
+                Enter the URL of an existing job posting to automatically extract and import the details.
+              </p>
+
+              <form id="importJobForm">
+                <div style="margin-bottom: 20px;">
+                  <label style="display: block; margin-bottom: 8px; font-weight: 600;">Job Posting URL</label>
+                  <input type="url" id="jobUrl" required placeholder="https://example.com/careers/job-posting" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px;">
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                  <button type="button" class="btn btn-secondary" onclick="loadJobs()">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Import Job Details</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('importJobForm').addEventListener('submit', handleImportJob);
+    }
+
+    // Handle import job
+    async function handleImportJob(e) {
+      e.preventDefault();
+      
+      const url = document.getElementById('jobUrl').value.trim();
+
+      try {
+        showLoading('jobsContainer');
+        const response = await apiCall('/api/v1/posts/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        if (response && response.data) {
+          fillJobFormWithImportedData(response.data);
+          showNotification(response.message || 'Job details imported! Please review and edit before posting.', 'success');
+        }
+      } catch (error) {
+        showNotification(error.message || 'Failed to import job details', 'error');
+        showImportJobForm();
+      }
+    }
+
+    // Fill form with imported data
+    function fillJobFormWithImportedData(data) {
+      showCreateJobInfo();
+      
+      setTimeout(() => {
+        document.getElementById('positionTitle').value = data.positionTitle || '';
+        document.getElementById('description').value = data.description || '';
+        document.getElementById('location').value = data.location || '';
+        document.getElementById('employmentType').value = data.employmentType || '';
+        document.getElementById('minSalary').value = data.minSalary || '';
+        document.getElementById('maxSalary').value = data.maxSalary || '';
+        document.getElementById('requiredSkills').value = data.requiredSkills || '';
+        document.getElementById('optionalSkills').value = data.optionalSkills || '';
+        document.getElementById('experienceLevel').value = data.experienceLevel || '';
+        document.getElementById('educationLevel').value = data.educationLevel || '';
+        document.getElementById('benefits').value = data.benefits || '';
+        document.getElementById('applicationUrl').value = data.applicationUrl || '';
+      }, 100);
     }
 
     // Load Candidate Prospects
