@@ -23,27 +23,40 @@ export default async function getPostsForRecruiters(req, res, next) {
   const transcription = container.make('models/transcriptions');
   const jobSkill = container.make('models/jobskill');
   try {
+    // Check if database is connected
+    if (!user) {
+      return res.status(503).send({
+        error: 'Database offline',
+        message: 'Unable to retrieve candidate prospects. The database is currently offline. Please try again later.',
+      });
+    }
+    
     // Pagination
     const offset = req.query.page * req.query.pageSize;
     const limit = req.query.pageSize;
     // Get user personality traits
     // const userData = await user.findById(req.token.sub, { id: true, personality: true })
     let jobSkillIdsToNames;
-    if (req.body.skills) {
-      jobSkillIdsToNames = await jobSkill.findManyOr(
-        req.body.skills.map((skillId) => {
-          return {
-            id: skillId,
-          };
-        }),
-        { name: true },
-      );
-      if (!jobSkillIdsToNames && jobSkillIdsToNames.length === 0) {
-        return res.status(400).send({
-          message: 'Job skill IDs provided are not valid.',
-        });
+    if (req.body && req.body.skills && jobSkill) {
+      try {
+        jobSkillIdsToNames = await jobSkill.findManyOr(
+          req.body.skills.map((skillId) => {
+            return {
+              id: skillId,
+            };
+          }),
+          { name: true },
+        );
+        if (!jobSkillIdsToNames || jobSkillIdsToNames.length === 0) {
+          return res.status(400).send({
+            message: 'Job skill IDs provided are not valid.',
+          });
+        }
+        jobSkillIdsToNames = jobSkillIdsToNames.map((skill) => skill.name);
+      } catch (dbError) {
+        logger.warn('Job skill lookup failed, continuing without skill filter:', dbError.message);
+        jobSkillIdsToNames = null;
       }
-      jobSkillIdsToNames = jobSkillIdsToNames.map((skill) => skill.name);
     }
     // Build prisma queries
     const prismaQuery = skipUndefined({
@@ -58,7 +71,7 @@ export default async function getPostsForRecruiters(req, res, next) {
           accepted: false,
         },
       },
-      skills: req.body.skills
+      skills: req.body && req.body.skills && jobSkillIdsToNames && jobSkillIdsToNames.length > 0
         ? {
             hasSome: jobSkillIdsToNames,
           }
@@ -68,96 +81,119 @@ export default async function getPostsForRecruiters(req, res, next) {
       },
     });
     // Get results
-    const results = await user.findMany(
-      prismaQuery,
-      {
-        id: true,
-        email: true,
-        phone: true,
-        phoneCountryCode: true,
-        name: true,
-        photo: {
-          select: {
-            streamUrl: true,
-          },
-        },
-        matchMedia: {
-          select: {
-            id: true,
-            streamUrl: true,
-            category: true,
-          },
-        },
-        roleSubtype: true,
-        employmentStatus: true,
-        employmentTitle: true,
-        personality: {
-          select: {
-            title: true,
-            detail: true,
-          },
-        },
-        resumeData: true,
-        industry: true,
-        skills: true,
-      },
-      limit,
-      offset,
-      'createdTime',
-      'desc',
-      null,
-      null,
-      {
-        id: {
-          not: req.token.sub,
-        },
-        roleSubtype: {
-          not: 'RECRUITER',
-        },
-        role: {
-          not: 'TESTER',
-        },
-      },
-    );
-    // Get list of job skill
-    const jobSkills = await jobSkill.findMany(
-      {
-        useCount: {
-          gt: 0,
-        },
-      },
-      {
-        id: true,
-        name: true,
-        order: true,
-        useCount: true,
-      },
-      limit,
-      offset,
-      'useCount',
-      'desc',
-    );
-    // Get match media transcriptions
-    const transcripts = await transcription.findManyOr(
-      results.map((user) => {
-        return {
-          user: {
-            is: {
-              id: user.id,
+    let results = [];
+    try {
+      results = await user.findMany(
+        prismaQuery,
+        {
+          id: true,
+          email: true,
+          phone: true,
+          phoneCountryCode: true,
+          name: true,
+          photo: {
+            select: {
+              streamUrl: true,
             },
           },
-        };
-      }),
-      {
-        user: {
-          select: {
-            id: true,
+          matchMedia: {
+            select: {
+              id: true,
+              streamUrl: true,
+              category: true,
+            },
+          },
+          roleSubtype: true,
+          employmentStatus: true,
+          employmentTitle: true,
+          personality: {
+            select: {
+              title: true,
+              detail: true,
+            },
+          },
+          resumeData: true,
+          industry: true,
+          skills: true,
+        },
+        limit,
+        offset,
+        'createdTime',
+        'desc',
+        null,
+        null,
+        {
+          id: {
+            not: req.token.sub,
+          },
+          roleSubtype: {
+            not: 'RECRUITER',
+          },
+          role: {
+            not: 'TESTER',
           },
         },
-        text: true,
-        mediaId: true,
-      },
-    );
+      );
+    } catch (dbError) {
+      logger.error('User query failed:', dbError.message);
+      return res.status(503).send({
+        error: 'Database offline',
+        message: 'Unable to retrieve candidate prospects. The database is currently experiencing issues. Please try again later.',
+      });
+    }
+    // Get list of job skill
+    let jobSkills = [];
+    if (jobSkill) {
+      try {
+        jobSkills = await jobSkill.findMany(
+          {
+            useCount: {
+              gt: 0,
+            },
+          },
+          {
+            id: true,
+            name: true,
+            order: true,
+            useCount: true,
+          },
+          limit,
+          offset,
+          'useCount',
+          'desc',
+        );
+      } catch (dbError) {
+        logger.warn('Job skills lookup failed, continuing with empty list:', dbError.message);
+      }
+    }
+    // Get match media transcriptions
+    let transcripts = [];
+    if (transcription) {
+      try {
+        transcripts = await transcription.findManyOr(
+          results.map((user) => {
+            return {
+              user: {
+                is: {
+                  id: user.id,
+                },
+              },
+            };
+          }),
+          {
+            user: {
+              select: {
+                id: true,
+              },
+            },
+            text: true,
+            mediaId: true,
+          },
+        );
+      } catch (dbError) {
+        logger.warn('Transcription lookup failed, continuing without transcripts:', dbError.message);
+      }
+    }
     // Return results by postType
     // JOB will never be populated for this response, but we
     // need to make its compatible with the getPosts (for candidates) endpoint

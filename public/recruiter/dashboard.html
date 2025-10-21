@@ -84,7 +84,7 @@
     async function loadJobs() {
       showLoading('jobsContainer');
       try {
-        const response = await apiCall('/api/v1/posts?page=0&pageSize=20');
+        const response = await apiCall('/api/v1/posts/user?page=0&pageSize=20&postType=JOB');
         if (!response || !response.data || response.data.length === 0) {
           showEmptyState('jobsContainer', '💼', 'No jobs posted yet', 'Create your first job posting to start finding candidates', 'Post a Job', 'showCreateJobInfo()');
           return;

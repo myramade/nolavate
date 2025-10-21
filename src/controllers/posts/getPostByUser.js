@@ -8,17 +8,32 @@ export default async function getPostsByUserId(req, res, next) {
   const logger = container.make('logger');
   const post = container.make('models/post');
   try {
+    // Check if database is connected
+    if (!post) {
+      return res.status(503).send({
+        error: 'Database offline',
+        message: 'Unable to retrieve job posts. The database is currently offline. Please try again later.',
+      });
+    }
+    
     // Pagination
     const offset = req.query.page * req.query.pageSize;
     const limit = req.query.pageSize;
+    
+    // Use current user's ID from token if userId not provided
+    const userId = req.query.userId || req.token.sub;
+    
     const query = {
-      userId: req.query.userId,
+      userId: userId,
     };
     if (req.query.postType) {
       query.postType = req.query.postType.toUpperCase();
     }
-    const results = await post.findMany(
-      query,
+    
+    let results = [];
+    try {
+      results = await post.findMany(
+        query,
       {
         id: true,
         title: true,
@@ -116,6 +131,14 @@ export default async function getPostsByUserId(req, res, next) {
       limit,
       offset,
     );
+    } catch (dbError) {
+      logger.error('Post query failed:', dbError.message);
+      return res.status(503).send({
+        error: 'Database offline',
+        message: 'Unable to retrieve job posts. The database is currently experiencing issues. Please try again later.',
+      });
+    }
+    
     // Format results
     for (let i = 0; i < results.length; i++) {
       // Set user photo as thumbnail
