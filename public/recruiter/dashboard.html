@@ -361,14 +361,31 @@
       }
     }
 
-    // Create company profile (placeholder)
+    // Create company profile using AI-powered lookup
     function createCompany() {
-      showNotification('Company creation requires uploading a logo and detailed information. This feature will be implemented soon.', 'info');
+      const companyName = prompt('Enter your company name (we\'ll look up the details automatically):');
+      if (!companyName || companyName.trim() === '') return;
+
+      showLoading('profileContainer');
+      
+      apiCall('/api/v1/web/company/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company: companyName.trim() })
+      })
+        .then(() => {
+          showNotification('Company profile created successfully!', 'success');
+          loadProfile();
+        })
+        .catch(error => {
+          showNotification(error.message || 'Failed to create company profile', 'error');
+          loadProfile();
+        });
     }
 
-    // Edit company profile (placeholder)
+    // Edit company profile
     function editCompany() {
-      showNotification('Company editing requires API integration with file uploads. This feature will be implemented soon.', 'info');
+      showNotification('To edit your company profile including logo, please use the API endpoint PUT /api/v1/web/company with FormData. Full editing UI coming soon!', 'info');
     }
 
     // Initialize - load jobs by default
