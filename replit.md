@@ -52,7 +52,8 @@ Implemented complete job posting system for recruiters with creation and import 
 
 **Technical Details:**
 - createSimplePost validates recruiter has company profile before posting
-- Salary compensation properly saved from minSalary/maxSalary fields
+- Production-ready salary validation: handles both string and numeric inputs, strict regex validation (`/^\d+$/`) rejects malformed values like "123abc", accepts valid zeros, prevents NaN persistence
+- Salary compensation properly saved from minSalary/maxSalary fields with proper undefined handling for missing bounds
 - Returns 503 when database offline (job creation requires MongoDB)
 - Import endpoint returns mock job data for testing
 - UI switches between import, create, and list views seamlessly
