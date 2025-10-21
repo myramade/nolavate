@@ -11,6 +11,32 @@ A NodeJS Express.js API for the Culture Forward application - a recruitment and 
 
 ## Recent Changes (October 2025)
 
+### Removed Google and Apple OAuth Authentication
+**Date:** October 21, 2025
+
+Simplified authentication by removing third-party OAuth providers:
+
+**What was removed:**
+- Google Sign-In buttons from signup and login pages
+- Apple Sign-In buttons from signup and login pages
+- Google and Apple SDK script tags from HTML pages
+- OAuth-related JavaScript code from `public/js/auth.js`
+- `loadOAuthConfig`, `triggerGoogleSignIn`, `handleGoogleSignIn`, and `handleAppleSignIn` functions
+
+**What remains:**
+- ✅ Email/Password authentication (fully functional)
+- ✅ JWT token-based sessions
+- ✅ Role-based dashboards (Candidate/Recruiter)
+- ✅ Mobile-responsive design
+- ✅ Form validation and error handling
+
+**Backend OAuth endpoints still exist** but are unused:
+- `POST /auth/google` (can be removed if not needed)
+- `POST /auth/apple` (can be removed if not needed)
+- `GET /auth/config` (can be removed if not needed)
+
+**Note:** Users can only sign up and sign in using email and password.
+
 ### Fixed DigitalOcean Deployment Error
 **Date:** October 20, 2025
 
@@ -34,26 +60,22 @@ Fixed critical production deployment issue causing "Internal server error" durin
 
 See `DEPLOYMENT_GUIDE.md` for detailed instructions.
 
-### Mobile-Friendly Frontend with OAuth Integration
-**Date:** October 20, 2025
+### Mobile-Friendly Frontend with Email/Password Authentication
+**Date:** October 20, 2025 (Updated: October 21, 2025)
 
-Added a complete mobile-responsive frontend with Google and Apple OAuth authentication:
+Added a complete mobile-responsive frontend with email/password authentication:
 
 **What was added:**
-- Mobile-friendly sign-up page (`public/index.html`) with Google and Apple sign-in buttons
+- Mobile-friendly sign-up page (`public/index.html`)
 - Mobile-friendly login page (`public/login.html`)
 - Responsive CSS with modern gradient design (`public/css/styles.css`)
-- Complete authentication flow with OAuth integration (`public/js/auth.js`)
-- Backend Google OAuth endpoint (`POST /auth/google`)
-- Backend Apple Sign-In endpoint (`POST /auth/apple`)
+- Complete authentication flow (`public/js/auth.js`)
 - Dashboard pages for candidates and recruiters
 - Static file serving from Express
 
 **Features:**
 - ✅ Mobile-first responsive design (works perfectly on all devices)
-- ✅ Google OAuth integration with ID token verification
-- ✅ Apple Sign-In integration with authorization code exchange
-- ✅ Email/Password traditional authentication
+- ✅ Email/Password authentication
 - ✅ Role selection (Candidate vs Recruiter)
 - ✅ Beautiful gradient UI with smooth animations
 - ✅ Touch-friendly buttons (48px minimum tap targets)
@@ -62,10 +84,7 @@ Added a complete mobile-responsive frontend with Google and Apple OAuth authenti
 - ✅ Success/error notifications
 - ✅ Automatic redirect to role-specific dashboards
 
-**OAuth Setup:**
-- See `OAUTH_SETUP.md` for complete configuration instructions
-- Requires `GOOGLE_CLIENT_ID` for Google OAuth
-- Requires `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID` for Apple Sign-In
+**Note:** Google and Apple OAuth were removed on October 21, 2025. Only email/password authentication is supported.
 
 ### Database Connection Fixed - MongoDB Integrated
 **Date:** October 20, 2025
