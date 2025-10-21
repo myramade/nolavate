@@ -10,6 +10,7 @@ import getCompany from './getCompany.js';
 import getMyCompany from './getMyCompany.js';
 import metrics from './metrics.js';
 import updateCompany from './updateCompany.js';
+import updateUserProfile from './updateUserProfile.js';
 
 // Multer upload middleware
 const uploadPhotos = container.make('upload')('images');
@@ -50,5 +51,8 @@ router.post('/company/v2', baseMiddleware, createCompanyV2);
 router.put('/company', profilePhotoWrapper, updateCompany);
 router.delete('/company', adminMiddleware, deleteCompany);
 router.get('/metrics', baseMiddleware, metrics);
+
+// User profile endpoints
+router.put('/profile', profilePhotoWrapper, updateUserProfile);
 
 export default router;
