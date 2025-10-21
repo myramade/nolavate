@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head><title>Signup Test</title></head>
+<body>
+<h1>Testing Signup Flow</h1>
+<button onclick="testSignup()">Test Signup</button>
+<pre id="result"></pre>
+
+<script>
+async function testSignup() {
+  const result = document.getElementById('result');
+  result.textContent = 'Testing...';
+  
+  try {
+    const response = await fetch('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Test User',
+        email: 'test' + Date.now() + '@example.com',
+        password: 'password123',
+        roleSubtype: 'CANDIDATE'
+      })
+    });
+    
+    const data = await response.json();
+    result.textContent = 'SUCCESS:\n' + JSON.stringify(data, null, 2);
+    
+    // Test saving to localStorage
+    if (data && data.data) {
+      localStorage.setItem('accessToken', data.data.accessToken);
+      localStorage.setItem('user', JSON.stringify(data.data.user));
+      result.textContent += '\n\nLocalStorage saved successfully!';
+      result.textContent += '\nUser role: ' + data.data.user.roleSubtype;
+      result.textContent += '\n\nWould redirect to: /' + 
+        (data.data.user.roleSubtype === 'RECRUITER' ? 'recruiter' : 'candidate') + 
+        '/dashboard.html';
+    }
+  } catch (error) {
+    result.textContent = 'ERROR:\n' + error.message;
+  }
+}
+</script>
+</body>
+</html>
