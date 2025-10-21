@@ -63,7 +63,18 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Use routers
+// Use routers with /api/v1 prefix
+app.use('/api/v1/assessment', assessmentRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/candidate', candidateRoutes);
+app.use('/api/v1/joboffers', jobOffersRoutes);
+app.use('/api/v1/matches', matchesRoutes);
+app.use('/api/v1/posts', postsRoutes);
+app.use('/api/v1/prospects', prospectsRoutes);
+app.use('/api/v1/recruiter', recruiterRoutes);
+app.use('/api/v1/web', webRoutes);
+
+// Backward compatibility - keep old routes working
 app.use('/assessment', assessmentRoutes);
 app.use('/auth', authRoutes);
 app.use('/candidate', candidateRoutes);

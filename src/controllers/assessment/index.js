@@ -12,7 +12,7 @@ router.get(
   jwtAuth(container.make('roles').user),
   getBaseQuestions,
 );
-router.post('/results', jwtAuth(container.make('roles').user), getResults);
+router.get('/results', jwtAuth(container.make('roles').user), getResults);
 router.post(
   '/submit',
   [jwtAuth(container.make('roles').user), validateRequest],

@@ -1,17 +1,45 @@
+// In-memory storage for when database is not available
+const memoryStorage = new Map();
+
 export default class BaseModel {
   constructor(database, collectionName) {
     this.db = database;
     this.collection = collectionName;
+    
+    // Initialize memory storage for this collection
+    if (!memoryStorage.has(collectionName)) {
+      memoryStorage.set(collectionName, new Map());
+    }
   }
 
   async create(data) {
-    if (!this.db) return { ...data, _id: 'mock-id' };
+    if (!this.db) {
+      const id = `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const record = { ...data, _id: id };
+      const storage = memoryStorage.get(this.collection);
+      storage.set(id, record);
+      return record;
+    }
     const result = await this.db.collection(this.collection).insertOne(data);
     return { ...data, _id: result.insertedId };
   }
 
   async findOne(query) {
-    if (!this.db) return null;
+    if (!this.db) {
+      const storage = memoryStorage.get(this.collection);
+      // Simple query matching for common cases
+      for (const [id, record] of storage.entries()) {
+        let matches = true;
+        for (const [key, value] of Object.entries(query)) {
+          if (record[key] !== value) {
+            matches = false;
+            break;
+          }
+        }
+        if (matches) return record;
+      }
+      return null;
+    }
     return await this.db.collection(this.collection).findOne(query);
   }
 
