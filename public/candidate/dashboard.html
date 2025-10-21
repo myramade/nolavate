@@ -341,6 +341,30 @@
               </div>
             </div>
           </div>
+
+          <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="margin: 0;">Profile Video</h3>
+              <button class="btn btn-secondary" onclick="document.getElementById('videoUpload').click()" style="padding: 8px 16px; font-size: 14px;">
+                🎥 Upload Video
+              </button>
+              <input type="file" id="videoUpload" accept="video/*" style="display: none;" onchange="uploadProfileVideo(event)">
+            </div>
+            ${user.video?.streamUrl || user.video ? `
+              <div style="border-radius: 12px; overflow: hidden; background: #000;">
+                <video controls style="width: 100%; max-height: 400px; display: block;">
+                  <source src="${user.video.streamUrl || user.video}" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            ` : `
+              <div style="text-align: center; padding: 40px 20px; border: 2px dashed var(--border-color); border-radius: 12px;">
+                <div style="font-size: 48px; margin-bottom: 12px;">🎥</div>
+                <p style="color: var(--text-light); margin-bottom: 16px;">No profile video uploaded yet</p>
+                <p style="color: var(--text-light); font-size: 13px;">Upload a video to introduce yourself to recruiters (max 10MB)</p>
+              </div>
+            `}
+          </div>
           
           <div style="text-align: center;">
             <button class="btn btn-danger" onclick="logout()">Sign Out</button>
@@ -399,6 +423,59 @@
       } catch (error) {
         console.error('Photo upload error:', error);
         showNotification(error.message || 'Failed to upload photo', 'error');
+      }
+    }
+
+    // Upload profile video
+    async function uploadProfileVideo(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // Validate file type
+      if (!file.type.startsWith('video/')) {
+        showNotification('Please select a video file', 'error');
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        showNotification('Video size must be less than 10MB', 'error');
+        return;
+      }
+
+      try {
+        showNotification('Uploading video...', 'info');
+
+        const formData = new FormData();
+        formData.append('video', file);
+
+        const token = localStorage.getItem('authToken');
+        const response = await fetch('/api/v1/web/profile', {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to upload video');
+        }
+
+        const result = await response.json();
+        
+        // Update user object in localStorage
+        const updatedUser = { ...user, video: result.data.video };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        showNotification('Profile video uploaded successfully!', 'success');
+        
+        // Reload profile to show new video
+        setTimeout(() => window.location.reload(), 1000);
+      } catch (error) {
+        console.error('Video upload error:', error);
+        showNotification(error.message || 'Failed to upload video', 'error');
       }
     }
 
