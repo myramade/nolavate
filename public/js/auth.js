@@ -1,32 +1,7 @@
-// Configuration - Fetched dynamically from backend
-let CONFIG = {
-  API_URL: window.location.origin,
-  GOOGLE_CLIENT_ID: null,
-  APPLE_CLIENT_ID: null,
-  APPLE_REDIRECT_URI: window.location.origin + '/auth/apple/callback'
+// Configuration
+const CONFIG = {
+  API_URL: window.location.origin
 };
-
-// Fetch OAuth configuration from backend
-async function loadOAuthConfig() {
-  try {
-    const response = await fetch(`${CONFIG.API_URL}/auth/config`);
-    const data = await response.json();
-    
-    CONFIG.GOOGLE_CLIENT_ID = data.googleClientId;
-    CONFIG.APPLE_CLIENT_ID = data.appleClientId;
-    CONFIG.APPLE_REDIRECT_URI = data.appleRedirectUri || CONFIG.APPLE_REDIRECT_URI;
-    
-    console.log('OAuth config loaded:', {
-      hasGoogle: !!CONFIG.GOOGLE_CLIENT_ID,
-      hasApple: !!CONFIG.APPLE_CLIENT_ID
-    });
-    
-    return data;
-  } catch (error) {
-    console.error('Failed to load OAuth config:', error);
-    return null;
-  }
-}
 
 // Utility Functions
 function showNotification(message, type = 'success') {
@@ -270,101 +245,6 @@ if (loginForm) {
   });
 }
 
-// Google Sign-In Handler
-function triggerGoogleSignIn() {
-  // Check if Google client is configured
-  if (!CONFIG.GOOGLE_CLIENT_ID) {
-    showNotification('Google Sign-In is not configured. Please contact support.', 'error');
-    return;
-  }
-  
-  // Trigger Google One Tap prompt
-  google.accounts.id.prompt();
-}
-
-async function handleGoogleSignIn(response) {
-  console.log('Google sign-in initiated');
-  
-  try {
-    // Get the role subtype from the page (if on signup page)
-    const roleSelect = document.getElementById('roleSubtype');
-    const roleSubtype = roleSelect ? roleSelect.value : 'CANDIDATE';
-    
-    // Send the ID token to your backend for verification
-    const result = await fetch(`${CONFIG.API_URL}/auth/google`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        idToken: response.credential,
-        roleSubtype: roleSubtype
-      })
-    });
-
-    const data = await result.json();
-
-    if (!result.ok) {
-      throw new Error(data.message || 'Google sign-in failed');
-    }
-
-    saveUserData(data);
-    showNotification('Signed in with Google successfully!', 'success');
-    setTimeout(() => redirectAfterAuth(), 1500);
-  } catch (error) {
-    console.error('Google sign-in error:', error);
-    showNotification(error.message || 'Google sign-in failed. Please try again.', 'error');
-  }
-}
-
-// Apple Sign-In Handler
-async function handleAppleSignIn() {
-  // Check if Apple client is configured
-  if (!CONFIG.APPLE_CLIENT_ID) {
-    showNotification('Apple Sign-In is not configured. Please contact support.', 'error');
-    return;
-  }
-  
-  try {
-    // Get the role subtype from the page (if on signup page)
-    const roleSelect = document.getElementById('roleSubtype');
-    const roleSubtype = roleSelect ? roleSelect.value : 'CANDIDATE';
-    
-    // Trigger Apple Sign-In
-    const response = await AppleID.auth.signIn();
-    console.log('Apple authorization received');
-    
-    // Send authorization data to backend
-    const result = await fetch(`${CONFIG.API_URL}/auth/apple`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        code: response.authorization.code,
-        idToken: response.authorization.id_token,
-        roleSubtype: roleSubtype
-      })
-    });
-
-    const data = await result.json();
-
-    if (!result.ok) {
-      throw new Error(data.message || 'Apple sign-in failed');
-    }
-
-    saveUserData(data);
-    showNotification('Signed in with Apple successfully!', 'success');
-    setTimeout(() => redirectAfterAuth(), 1500);
-  } catch (error) {
-    console.error('Apple sign-in error:', error);
-    // Don't show error if user just closed the popup
-    if (error.error !== 'popup_closed_by_user') {
-      showNotification(error.message || 'Apple sign-in failed. Please try again.', 'error');
-    }
-  }
-}
-
 // Clear errors on input
 document.querySelectorAll('input').forEach(input => {
   input.addEventListener('input', (e) => {
@@ -373,47 +253,11 @@ document.querySelectorAll('input').forEach(input => {
   });
 });
 
-// Initialize OAuth SDKs on page load
-window.addEventListener('DOMContentLoaded', async () => {
-  // Check if user is already logged in
+// Check if user is already logged in on page load
+window.addEventListener('DOMContentLoaded', () => {
   const accessToken = localStorage.getItem('accessToken');
   if (accessToken && (window.location.pathname === '/' || window.location.pathname === '/index.html' || window.location.pathname === '/login.html')) {
     // User is already logged in, redirect to dashboard
     redirectAfterAuth();
-    return;
-  }
-
-  // Load OAuth configuration from backend
-  await loadOAuthConfig();
-
-  // Initialize Google Sign-In if credentials are configured
-  if (CONFIG.GOOGLE_CLIENT_ID && typeof google !== 'undefined') {
-    try {
-      google.accounts.id.initialize({
-        client_id: CONFIG.GOOGLE_CLIENT_ID,
-        callback: handleGoogleSignIn,
-        auto_select: false,
-        cancel_on_tap_outside: true
-      });
-      console.log('Google Sign-In SDK initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize Google Sign-In:', error);
-    }
-  }
-
-  // Initialize Apple Sign-In if credentials are configured
-  if (CONFIG.APPLE_CLIENT_ID && typeof AppleID !== 'undefined') {
-    try {
-      AppleID.auth.init({
-        clientId: CONFIG.APPLE_CLIENT_ID,
-        scope: 'name email',
-        redirectURI: CONFIG.APPLE_REDIRECT_URI,
-        state: 'signin',
-        usePopup: true
-      });
-      console.log('Apple Sign-In SDK initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize Apple Sign-In:', error);
-    }
   }
 });
