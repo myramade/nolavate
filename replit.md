@@ -5,6 +5,32 @@ The Culture Forward API is a NodeJS Express.js backend for a recruitment and job
 
 ## Recent Changes (October 2025)
 
+### User Profile Photo Upload
+**Date:** October 21, 2025
+
+Implemented complete profile photo upload functionality for all users:
+
+**What works:**
+- ✅ Profile photo upload for both candidates and recruiters
+- ✅ Camera button overlay on profile avatar for easy photo selection
+- ✅ Client-side validation (image files only, max 5MB)
+- ✅ Secure file upload to Supabase storage
+- ✅ Automatic photo display in profile sections
+- ✅ Falls back to initial-based avatar when no photo exists
+- ✅ Updates localStorage after successful upload
+- ✅ Mobile-friendly circular photo display
+
+**API Endpoints:**
+- `PUT /api/v1/web/profile` - Upload or update user profile photo (multipart/form-data with 'image' field)
+
+**Technical Details:**
+- Uses Multer middleware for file handling
+- Uploads to Supabase 'users' bucket with unique storage paths
+- Returns photo object with streamUrl, downloadUrl, storagePath
+- Graceful database offline handling with 503 responses
+- Validates file type and size on both client and server
+- Consistent UI across candidate and recruiter dashboards
+
 ### Assessment Feature Fully Working
 **Date:** October 21, 2025
 
