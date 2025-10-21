@@ -13,7 +13,17 @@ export async function connectToMongoDB() {
       return null;
     }
 
-    client = new MongoClient(mongoUrl);
+    console.log('Attempting to connect to MongoDB...');
+
+    const options = {
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+    };
+
+    client = new MongoClient(mongoUrl, options);
 
     await client.connect();
     
@@ -21,10 +31,14 @@ export async function connectToMongoDB() {
     const dbName = mongoUrl.split('/').pop().split('?')[0] || 'culture_forward';
     db = client.db(dbName);
     
+    // Test the connection
+    await db.command({ ping: 1 });
+    
     console.log(`Successfully connected to MongoDB database: ${dbName}`);
     return db;
   } catch (error) {
     console.error('Failed to connect to MongoDB:', error.message);
+    console.error('Error details:', error);
     console.warn('Continuing without database connection. API will use mock data.');
     return null;
   }
