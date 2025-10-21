@@ -30,6 +30,36 @@ Implemented complete personality assessment system with mock data support:
 - Frontend properly handles 404 (no assessment) vs other errors
 - Assessment results persist across requests until server restart
 
+### Recruiter Profile Management
+**Date:** October 21, 2025
+
+Implemented complete recruiter profile system with company management:
+
+**What works:**
+- ✅ Personal profile display (name, email, role, stats)
+- ✅ Company profile viewing with all details (logo, website, industry, description, location, employees, tech stack, culture)
+- ✅ Company creation using AI-powered lookup (via `/api/v1/web/company/v2`)
+- ✅ Graceful handling when no company profile exists
+- ✅ Stats dashboard (posted jobs count, matches count)
+
+**API Endpoints:**
+- `GET /api/v1/web/company/me` - Get current recruiter's company profile
+- `POST /api/v1/web/company/v2` - Create company using AI lookup (no file upload required)
+- `GET /api/v1/web/company?id=X` - Get specific company by ID
+- `PUT /api/v1/web/company` - Update company (requires FormData with logo upload)
+
+**Technical Details:**
+- New getMyCompany controller finds company by profileOwnerId
+- Recruiter dashboard profile tab displays both personal and company info
+- Company creation uses Perplexity AI to auto-fill company details
+- Editing company logo requires API call with FormData (noted in UI)
+- Works with mock data when MongoDB is offline
+
+**Future Enhancements:**
+- Replace prompt with modal form for company creation
+- Full edit UI with FormData handling for logo uploads
+- Better offline mode messaging
+
 ### API Routes Updated with /api/v1 Prefix
 **Date:** October 21, 2025
 
@@ -38,6 +68,7 @@ All API routes now support the `/api/v1` prefix for proper versioning:
 - Auth endpoints: `/api/v1/auth/*`
 - Posts endpoints: `/api/v1/posts/*`
 - Matches endpoints: `/api/v1/matches/*`
+- Web endpoints (company): `/api/v1/web/*`
 - All other endpoints follow the same pattern
 
 Backward compatibility maintained - old routes without `/api/v1` still work.
