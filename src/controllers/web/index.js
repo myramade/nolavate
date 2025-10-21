@@ -14,7 +14,21 @@ import updateUserProfile from './updateUserProfile.js';
 
 // Multer upload middleware
 const uploadPhotos = container.make('upload')('images');
-// Auth and upload wrapper
+const uploadMediaForProfile = container.make('upload')('images,videos');
+// Auth and upload wrapper for profile (supports both image and video)
+const profileMediaWrapper = [
+  jwtAuth(
+    container.make('roles').user,
+    false,
+    container.make('roles').recruiter,
+  ),
+  uploadMediaForProfile.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'video', maxCount: 1 }
+  ]),
+  validateRequest,
+];
+// Auth and upload wrapper (legacy - photo only)
 const profilePhotoWrapper = [
   jwtAuth(
     container.make('roles').user,
@@ -53,6 +67,6 @@ router.delete('/company', adminMiddleware, deleteCompany);
 router.get('/metrics', baseMiddleware, metrics);
 
 // User profile endpoints
-router.put('/profile', profilePhotoWrapper, updateUserProfile);
+router.put('/profile', profileMediaWrapper, updateUserProfile);
 
 export default router;

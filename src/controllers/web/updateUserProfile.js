@@ -20,39 +20,71 @@ export default async function updateUserProfile(req, res, next) {
     }
 
     let photo;
+    let video;
     
-    // Handle profile photo upload
-    if (req.file) {
-      logger.debug('Uploading user profile photo...');
-      const storagePath = `${req.token.sub}/profile/${req.file.filename}`;
-      const file = req.file.path;
-      const mimeType = req.file.mimetype;
-      const mediaType = req.file.extension;
-      
-      const { streamUrls, downloadUrls } = await supabaseUploadComplete(
-        [file],
-        [storagePath],
-        'users',
-        mimeType,
-        [req.file.originalname],
-      );
-      
-      photo = {
-        storagePath,
-        streamUrl: streamUrls[0],
-        downloadUrl: downloadUrls[0],
-        mediaType,
-        category: 'PROFILE_PHOTO',
-        count: 1,
-      };
+    // Handle file uploads (photo and/or video)
+    if (req.files) {
+      // Handle profile photo upload
+      if (req.files.image && req.files.image[0]) {
+        logger.debug('Uploading user profile photo...');
+        const imageFile = req.files.image[0];
+        const storagePath = `${req.token.sub}/profile/${imageFile.filename}`;
+        const file = imageFile.path;
+        const mimeType = imageFile.mimetype;
+        const mediaType = imageFile.extension;
+        
+        const { streamUrls, downloadUrls } = await supabaseUploadComplete(
+          [file],
+          [storagePath],
+          'users',
+          mimeType,
+          [imageFile.originalname],
+        );
+        
+        photo = {
+          storagePath,
+          streamUrl: streamUrls[0],
+          downloadUrl: downloadUrls[0],
+          mediaType,
+          category: 'PROFILE_PHOTO',
+          count: 1,
+        };
+      }
+
+      // Handle profile video upload
+      if (req.files.video && req.files.video[0]) {
+        logger.debug('Uploading user profile video...');
+        const videoFile = req.files.video[0];
+        const storagePath = `${req.token.sub}/profile/${videoFile.filename}`;
+        const file = videoFile.path;
+        const mimeType = videoFile.mimetype;
+        const mediaType = videoFile.extension;
+        
+        const { streamUrls, downloadUrls } = await supabaseUploadComplete(
+          [file],
+          [storagePath],
+          'users',
+          mimeType,
+          [videoFile.originalname],
+        );
+        
+        video = {
+          storagePath,
+          streamUrl: streamUrls[0],
+          downloadUrl: downloadUrls[0],
+          mediaType,
+          category: 'PROFILE_VIDEO',
+          count: 1,
+        };
+      }
     }
 
     // Build update body
     const updateBody = skipUndefined(
       {
         photo,
+        video,
         name: req.body.name,
-        // Add other profile fields as needed
       },
       true,
     );
@@ -72,6 +104,11 @@ export default async function updateUserProfile(req, res, next) {
         name: true,
         email: true,
         photo: {
+          select: {
+            streamUrl: true,
+          },
+        },
+        video: {
           select: {
             streamUrl: true,
           },
