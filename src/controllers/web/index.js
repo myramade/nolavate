@@ -7,6 +7,7 @@ import createCompany from './createCompany.js';
 import createCompanyV2 from './createCompanyV2.js';
 import deleteCompany from './deleteCompany.js';
 import getCompany from './getCompany.js';
+import getMyCompany from './getMyCompany.js';
 import metrics from './metrics.js';
 import updateCompany from './updateCompany.js';
 
@@ -43,6 +44,7 @@ router.get(
   [jwtAuth(container.make('roles').user), validateRequest],
   getCompany,
 );
+router.get('/company/me', baseMiddleware, getMyCompany);
 router.post('/company', profilePhotoWrapper, createCompany);
 router.post('/company/v2', baseMiddleware, createCompanyV2);
 router.put('/company', profilePhotoWrapper, updateCompany);
