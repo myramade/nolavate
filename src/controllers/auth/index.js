@@ -406,15 +406,22 @@ router.post('/forgot-password', validateRequest, async (req, res) => {
       }
     );
 
-    // In production, you would send this via email
-    // For now, we return it in the response for development/testing
+    // Generate reset URL
     const resetUrl = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
     
+    // TODO: Send reset URL via email in production
+    // For development/testing, log to console only (DO NOT return in response for security)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('\n=== PASSWORD RESET LINK (DEV ONLY) ===');
+      console.log(`Email: ${email}`);
+      console.log(`Reset URL: ${resetUrl}`);
+      console.log(`Expires in: 1 hour`);
+      console.log('=====================================\n');
+    }
+    
+    // Always return generic success message for security
     res.json({
-      message: 'Password reset link generated',
-      data: {
-        resetUrl // In production, remove this and send via email instead
-      }
+      message: 'If an account exists with that email, a password reset link has been sent. Please check your email.'
     });
   } catch (error) {
     console.error('Forgot password error:', error);

@@ -5,6 +5,53 @@ The Culture Forward API is a NodeJS Express.js backend for a recruitment and job
 
 ## Recent Changes (October 2025)
 
+### Password Reset Flow Fixed
+**Date:** October 22, 2025
+
+Fixed critical routing issue and implemented secure password reset functionality:
+
+**What was fixed:**
+- ✅ Created missing `forgot-password.html` page (was returning 404 error)
+- ✅ Created `reset-password.html` page for password reset completion
+- ✅ Both pages match existing design system and mobile-friendly styling
+- ✅ All authentication pages now working (signup, login, forgot password, reset password)
+
+**Password Reset Features:**
+- ✅ Secure JWT-based reset tokens with 1-hour expiration
+- ✅ Token can only be used once (cleared after successful reset)
+- ✅ Email enumeration protection (generic messages)
+- ✅ Client and server-side password validation (min 8 characters)
+- ✅ Bcrypt password hashing
+- ✅ Token type verification prevents misuse
+
+**API Endpoints:**
+- `POST /api/v1/auth/forgot-password` - Generate password reset token
+  - Accepts email address
+  - Stores token in user record with 1-hour expiry
+  - Returns generic success message (secure)
+  - Logs reset URL to server console in development mode only
+- `POST /api/v1/auth/reset-password` - Reset password with token
+  - Accepts token and new password
+  - Validates token hasn't expired or been used
+  - Updates password and clears token
+
+**Frontend Pages:**
+- `/forgot-password.html` - Email input form for password reset request
+- `/reset-password.html` - New password form with token validation
+
+**Security:**
+- Reset tokens NEVER exposed to client (server console only in dev mode)
+- Generic messages prevent email enumeration attacks
+- Tokens stored server-side and validated on use
+- One-time use tokens prevent replay attacks
+
+**Production Note:**
+- Email integration required before production deployment
+- Reset links currently logged to console for testing
+- TODO comment in code indicates where to add email service
+
+## Recent Changes (October 2025)
+
 ### User Profile Photo and Video Upload
 **Date:** October 21, 2025
 
