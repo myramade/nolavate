@@ -85,7 +85,7 @@ function validateEmail(email) {
 // API Calls
 async function registerUser(userData) {
   try {
-    const response = await fetch(`${CONFIG.API_URL}/auth/register`, {
+    const response = await fetch(`${CONFIG.API_URL}/api/v1/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ async function registerUser(userData) {
 
 async function loginUser(credentials) {
   try {
-    const response = await fetch(`${CONFIG.API_URL}/auth/login`, {
+    const response = await fetch(`${CONFIG.API_URL}/api/v1/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
