@@ -5,6 +5,38 @@ The Culture Forward API is a NodeJS Express.js backend for a recruitment and job
 
 ## Recent Changes (October 2025)
 
+### All Routing Issues Fixed
+**Date:** October 22, 2025
+
+Conducted comprehensive routing audit and fixed all identified issues:
+
+**Issues Fixed:**
+1. ✅ Created missing `/terms.html` page (was 404)
+2. ✅ Created missing `/privacy.html` page (was 404)
+3. ✅ Fixed signup page links to use correct .html extensions
+4. ✅ Standardized API endpoints in auth.js to use `/api/v1/` prefix consistently
+5. ✅ All authentication pages working correctly
+
+**New Pages Created:**
+- `/terms.html` - Complete Terms of Service with 11 sections (user conduct, privacy, termination, warranties, liability, etc.)
+- `/privacy.html` - Comprehensive Privacy Policy with 12 sections (GDPR-style data collection, usage, rights, security, etc.)
+
+**API Endpoint Standardization:**
+- Updated `public/js/auth.js` to use `/api/v1/auth/register` and `/api/v1/auth/login`
+- Consistent with dashboard files that already use `/api/v1/` prefix
+- Backward compatibility maintained on backend (both `/auth/*` and `/api/v1/auth/*` work)
+
+**All Routes Verified Working:**
+- ✅ /index.html (signup)
+- ✅ /login.html  
+- ✅ /forgot-password.html
+- ✅ /reset-password.html
+- ✅ /terms.html
+- ✅ /privacy.html
+- ✅ /candidate/dashboard.html
+- ✅ /recruiter/dashboard.html
+- ✅ All API endpoints
+
 ### Password Reset Flow Fixed
 **Date:** October 22, 2025
 
