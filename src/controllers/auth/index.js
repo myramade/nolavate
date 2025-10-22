@@ -361,4 +361,136 @@ router.post('/apple', validateRequest, async (req, res) => {
   }
 });
 
+// Forgot Password - Generate reset token
+router.post('/forgot-password', validateRequest, async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Find user
+    const user = await container.make('models/user').findOne({ email });
+    
+    // For security, always return success even if user doesn't exist
+    // This prevents email enumeration attacks
+    if (!user) {
+      return res.json({
+        message: 'If an account exists with that email, a reset link has been sent.'
+      });
+    }
+
+    // Generate reset token
+    const jwtSecret = process.env.JWT_SECRET || process.env.SESSION_TOKEN_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
+    }
+    
+    const resetToken = jwt.sign(
+      { 
+        sub: user._id,
+        email: user.email,
+        type: 'password_reset'
+      },
+      jwtSecret,
+      { expiresIn: '1h' }
+    );
+
+    // Store reset token and expiry in user record
+    await container.make('models/user').update(
+      { _id: user._id },
+      {
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: new Date(Date.now() + 3600000) // 1 hour
+      }
+    );
+
+    // In production, you would send this via email
+    // For now, we return it in the response for development/testing
+    const resetUrl = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
+    
+    res.json({
+      message: 'Password reset link generated',
+      data: {
+        resetUrl // In production, remove this and send via email instead
+      }
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Failed to process password reset request' });
+  }
+});
+
+// Reset Password - Verify token and update password
+router.post('/reset-password', validateRequest, async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    
+    if (!token || !password) {
+      return res.status(400).json({ message: 'Token and password are required' });
+    }
+
+    // Validate password length
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+
+    // Verify token
+    const jwtSecret = process.env.JWT_SECRET || process.env.SESSION_TOKEN_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, jwtSecret);
+    } catch (err) {
+      return res.status(401).json({ message: 'Invalid or expired reset token' });
+    }
+
+    // Verify token type
+    if (decoded.type !== 'password_reset') {
+      return res.status(401).json({ message: 'Invalid token type' });
+    }
+
+    // Find user and verify token matches
+    const user = await container.make('models/user').findOne({ 
+      _id: new ObjectId(decoded.sub)
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.resetPasswordToken !== token) {
+      return res.status(401).json({ message: 'Token has already been used or is invalid' });
+    }
+
+    if (user.resetPasswordExpires && new Date(user.resetPasswordExpires) < new Date()) {
+      return res.status(401).json({ message: 'Reset token has expired' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update password and clear reset token
+    await container.make('models/user').update(
+      { _id: user._id },
+      {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null
+      }
+    );
+
+    res.json({
+      message: 'Password has been reset successfully'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Failed to reset password' });
+  }
+});
+
 export default router;
