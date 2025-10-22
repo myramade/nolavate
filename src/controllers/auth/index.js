@@ -7,11 +7,61 @@ import container from '../../container.js';
 import validateRequest from '../../middleware/validateRequest.js';
 import { OAuth2Client } from 'google-auth-library';
 import appleSignin from 'apple-signin-auth';
+import https from 'https';
 
 const router = express.Router();
 
 // Initialize Google OAuth client
 const googleClient = new OAuth2Client();
+
+// Helper function to verify reCAPTCHA token
+async function verifyRecaptcha(token) {
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+  
+  if (!secretKey) {
+    console.warn('RECAPTCHA_SECRET_KEY not configured - skipping CAPTCHA verification');
+    return { success: true, skipVerification: true };
+  }
+
+  return new Promise((resolve, reject) => {
+    const data = `secret=${secretKey}&response=${token}`;
+    
+    const options = {
+      hostname: 'www.google.com',
+      port: 443,
+      path: '/recaptcha/api/siteverify',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': data.length
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let body = '';
+      
+      res.on('data', (chunk) => {
+        body += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(body);
+          resolve(result);
+        } catch (error) {
+          reject(new Error('Failed to parse reCAPTCHA response'));
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(error);
+    });
+
+    req.write(data);
+    req.end();
+  });
+}
 
 // Config endpoint - Provides OAuth client IDs to frontend
 router.get('/config', (req, res) => {
@@ -25,10 +75,34 @@ router.get('/config', (req, res) => {
 // Register endpoint
 router.post('/register', validateRequest, async (req, res) => {
   try {
-    const { email, password, name, role, roleSubtype } = req.body;
+    const { email, password, name, role, roleSubtype, recaptchaToken } = req.body;
     
     if (!email || !password || !name) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Verify reCAPTCHA if token is provided
+    if (recaptchaToken) {
+      try {
+        const captchaResult = await verifyRecaptcha(recaptchaToken);
+        
+        if (!captchaResult.skipVerification && !captchaResult.success) {
+          return res.status(400).json({ 
+            message: 'CAPTCHA verification failed. Please try again.',
+            errors: captchaResult['error-codes']
+          });
+        }
+      } catch (error) {
+        console.error('reCAPTCHA verification error:', error);
+        return res.status(500).json({ 
+          message: 'Failed to verify CAPTCHA. Please try again.' 
+        });
+      }
+    } else if (process.env.RECAPTCHA_SECRET_KEY) {
+      // If CAPTCHA is configured but no token provided
+      return res.status(400).json({ 
+        message: 'CAPTCHA verification required' 
+      });
     }
 
     // Check if user already exists
