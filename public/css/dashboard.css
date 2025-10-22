@@ -6,22 +6,22 @@
 }
 
 :root {
-  --primary-color: #667eea;
-  --secondary-color: #764ba2;
+  --primary-color: #4169E1;
+  --primary-hover: #2952CC;
   --success-color: #48bb78;
   --danger-color: #f56565;
   --warning-color: #ed8936;
   --text-dark: #1a202c;
   --text-light: #718096;
-  --border-color: #e2e8f0;
-  --bg-light: #f7fafc;
-  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --border-color: #E5E5EA;
+  --bg-light: #F8F9FA;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  background: var(--bg-light);
   min-height: 100vh;
   color: var(--text-dark);
 }
@@ -78,11 +78,12 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  background: var(--primary-color);
   color: white;
 }
 
 .btn-primary:hover {
+  background: var(--primary-hover);
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
@@ -292,7 +293,7 @@ body {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  background: var(--primary-color);
   display: flex;
   align-items: center;
   justify-content: center;
