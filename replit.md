@@ -5,6 +5,42 @@ The Culture Forward API is a NodeJS Express.js backend for a recruitment and job
 
 ## Recent Changes (October 2025)
 
+### AI Disclosure and reCAPTCHA Integration
+**Date:** October 22, 2025
+
+Added AI disclosure statement and Google reCAPTCHA v2 to the signup page for transparency and bot protection:
+
+**AI Disclosure:**
+- ✅ Prominent AI-powered platform notice on signup page
+- ✅ Clear messaging about AI usage and limitations
+- ✅ Styled with blue background and robot icon for visibility
+- ✅ Positioned above CAPTCHA for user awareness before signup
+
+**Google reCAPTCHA v2:**
+- ✅ reCAPTCHA widget integrated into signup form
+- ✅ Frontend validation prevents submission without CAPTCHA completion
+- ✅ Backend verification using Google's siteverify API
+- ✅ Graceful degradation when keys not configured (dev mode)
+- ✅ CAPTCHA resets on registration errors for better UX
+- ✅ Clear error messaging for users
+
+**Implementation Details:**
+- Frontend: Added reCAPTCHA widget, validation logic, error handling
+- Backend: `verifyRecaptcha()` helper function using native https module
+- Security: CAPTCHA required when SECRET_KEY configured, optional otherwise
+- Environment variables documented in `.env.example`
+
+**Required Environment Variables:**
+- `RECAPTCHA_SITE_KEY` - Public key from Google reCAPTCHA admin console
+- `RECAPTCHA_SECRET_KEY` - Secret key for backend verification
+
+**To Set Up:**
+1. Visit https://www.google.com/recaptcha/admin
+2. Register your site for reCAPTCHA v2 (checkbox)
+3. Add domains to allowed list
+4. Copy site key and secret key to `.env` file
+5. Update `data-sitekey` in `public/index.html` with your site key
+
 ### All Routing Issues Fixed
 **Date:** October 22, 2025
 
