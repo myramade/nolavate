@@ -23,10 +23,19 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 
 ### UI/UX Decisions
 - Mobile-first responsive design for all frontend pages (sign-up, login, dashboards).
-- Modern gradient UI with smooth animations.
+- Professional design system with royal blue (#4169E1) primary color and light gray (#F8F9FA) background.
+- Clean, minimal aesthetic with white cards and subtle shadows.
 - Touch-friendly buttons (48px minimum tap targets).
 - Real-time form validation and robust error handling.
 - Role-based content display for Candidate and Recruiter dashboards.
+
+**Design Tokens:**
+- Primary Color: `#4169E1` (Royal Blue)
+- Primary Hover: `#2952CC` (Dark Blue)
+- Background: `#F8F9FA` (Light Gray)
+- Border: `#E5E5EA`
+- Card Background: `#FFFFFF` (White)
+- Shadows: Soft, minimal for professional look
 
 ### Technical Implementations
 - **Tech Stack**: Node.js 20.x with Express 5.x.
