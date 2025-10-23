@@ -1,8 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { container as newContainer } from './di/container.js';
-import legacyContainer from './container.js';
+import container from './container.js';
 import { config } from './config/env.js';
 import { logger } from './config/logger.js';
 import { connectToMongoDB } from './services/mongodb.js';
@@ -13,9 +12,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = config.port;
 
-// Initialize MongoDB connection and legacy container
+// Initialize MongoDB connection and container
 await connectToMongoDB();
-await legacyContainer.initialize();
+await container.initialize();
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
