@@ -92,6 +92,32 @@ export default class BaseModel {
     }).toArray();
   }
 
+  async findManyAnd(whereArray, select = {}, sortBy = null, limit = -1, skip = 0) {
+    if (!this.db) return [];
+    
+    const query = this.db.collection(this.collection).find({
+      $and: whereArray
+    });
+    
+    if (Object.keys(select).length > 0) {
+      query.project(select);
+    }
+    
+    if (sortBy) {
+      query.sort(sortBy);
+    }
+    
+    if (skip > 0) {
+      query.skip(skip);
+    }
+    
+    if (limit > 0) {
+      query.limit(limit);
+    }
+    
+    return await query.toArray();
+  }
+
   async update(id, updateData) {
     if (!this.db) return { ...updateData, _id: id };
     try {

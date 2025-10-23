@@ -1,163 +1,57 @@
 import container from '../../container.js';
 import { getFormattedDate } from '../../services/helper.js';
+import { ObjectId } from 'mongodb';
 
 export default async function getMyMatches(req, res, next) {
   const logger = container.make('logger');
   const match = container.make('models/match');
+  
   try {
     // Pagination
-    const offset = req.query.page * req.query.pageSize;
-    const limit = req.query.pageSize;
-    // Get documents
-    const results = await match.findManyAnd(
-      [
-        {
-          [req.token.roleSubtype.toLowerCase()]: {
-            is: {
-              id: req.token.sub,
-            },
-          },
-        },
-        {
-          candidate: {
-            matchMedia: {
-              isEmpty: false,
-            },
-          },
-        },
-        {
-          accepted: true,
-        },
-        {
-          postId: {
-            not: null,
-          },
-        },
-      ],
-      {
-        id: true,
-        candidate: {
-          select: {
-            id: true,
-            name: true,
-            photo: {
-              select: {
-                streamUrl: true,
-              },
-            },
-            personality: {
-              select: {
-                title: true,
-                detail: true,
-              },
-            },
-            matchMedia: {
-              select: {
-                id: true,
-                streamUrl: true,
-                category: true,
-              },
-            },
-            employmentTitle: true,
-            skills: true,
-          },
-        },
-        recruiter: {
-          select: {
-            id: true,
-            name: true,
-            photo: {
-              select: {
-                streamUrl: true,
-              },
-            },
-          },
-        },
-        accepted: true,
-        post: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            video: {
-              select: {
-                streamUrl: true,
-              },
-            },
-            thumbnail: {
-              select: {
-                streamUrl: true,
-              },
-            },
-            positionTitle: true,
-            positionType: true,
-            employmentType: true,
-            compensation: true,
-            company: {
-              select: {
-                id: true,
-                name: true,
-                logo: {
-                  select: {
-                    streamUrl: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      null,
-      limit,
-      offset,
-    );
-    // Format results
-    if (results.length > 0) {
-      for (let i = 0; i < results.length; i++) {
-        if (!results[i].recruiter || !results[i].candidate) {
-          continue;
-        }
-        // Candidate must have at least the intro video complete
-        const atLeastIntroMedia = results[i].candidate.matchMedia.filter(
-          (media) => media.category === 'INFO',
-        );
-        if (atLeastIntroMedia.length === 0) {
-          continue;
-        }
-        results[i].media = results[i].candidate.matchMedia.map((media) => {
-          return {
-            id: media.id,
-            url: media.streamUrl,
-            category: media.category,
-          };
-        });
-        results[i].candidate.matchMedia = undefined;
-        results[i].candidate.photo = results[i].candidate.photo
-          ? results[i].candidate.photo.streamUrl
-          : null;
-        results[i].recruiter.photo = results[i].recruiter.photo
-          ? results[i].recruiter.photo.streamUrl
-          : null;
-        if (results[i].post?.company) {
-          results[i].company = results[i].post.company;
-          results[i].company.logo = results[i].company
-            ? results[i].company.logo.streamUrl
-            : null;
-          results[i].post.company = undefined;
-        }
-        results[i].thumbnail = results[i].post.thumbnail.streamUrl;
-      }
+    const page = parseInt(req.query.page) || 0;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const offset = page * pageSize;
+    const limit = pageSize;
+    
+    // Build query based on user role
+    const query = {
+      accepted: true,
+      postId: { $ne: null }
+    };
+
+    // Set the appropriate ID field based on role - convert to ObjectId
+    if (req.token.roleSubtype === 'CANDIDATE') {
+      query.candidateId = new ObjectId(req.token.sub);
+    } else if (req.token.roleSubtype === 'RECRUITER') {
+      query.recruiterId = new ObjectId(req.token.sub);
     }
-    // send response
+
+    // Get documents with pagination
+    const results = await match.findMany(query, {}, limit, offset, 'createdTime', 'desc');
+    
+    // Format results - simplified without complex nested relations
+    const formattedResults = results.map(result => ({
+      id: result._id,
+      candidateId: result.candidateId,
+      recruiterId: result.recruiterId,
+      postId: result.postId,
+      accepted: result.accepted,
+      createdTime: result.createdTime,
+      media: result.media || []
+    }));
+
+    // Send response
     return res.send({
-      data: results,
+      data: formattedResults,
       details: {
-        body: req.query,
+        page,
+        pageSize,
+        query: req.query,
       },
       generatedAt: getFormattedDate(),
     });
   } catch (err) {
-    logger.error('Error occrred fetching user matches. Reason:');
+    logger.error('Error occurred fetching user matches. Reason:');
     logger.error(err.stack);
     next(new Error('Unable to complete request.'));
   }
