@@ -1,46 +1,44 @@
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import { getFormattedDate } from '../../services/helper.js';
+import { toObjectId } from '../../utils/mongoHelpers.js';
 
 export default async function deleteCompany(req, res, next) {
   const company = container.make('models/company');
   const logger = container.make('logger');
   try {
-    const foundCompany = await company.findById(req.body.id, { id: true });
+    const companyId = toObjectId(req.body.id);
+    const userId = toObjectId(req.token.sub);
+    
+    if (!companyId) {
+      return res.status(400).send({
+        message: 'Invalid company ID.',
+      });
+    }
+    
+    // Find company by ID
+    const foundCompany = await company.findById(companyId);
     if (!foundCompany) {
       return res.status(400).send({
         message: 'Company was not found.',
       });
     }
-    const existingCompany = await company.findOne(
-      {
-        id: foundCompany.id,
-        AND: {
-          profileOwner: {
-            is: {
-              id: req.token.sub,
-            },
-          },
-        },
-      },
-      {
-        id: true,
-      },
-    );
+    
+    // Verify ownership - MongoDB query with profileOwnerId
+    const existingCompany = await company.findOne({
+      _id: companyId,
+      profileOwnerId: userId
+    });
+    
     if (!existingCompany) {
       return res.status(400).send({
         message: 'You cannot delete this company.',
       });
     }
-    await company.delete({
-      id: foundCompany.id,
-      AND: {
-        profileOwner: {
-          is: {
-            id: req.token.sub,
-          },
-        },
-      },
-    });
+    
+    // Delete company (ownership already verified)
+    await company.delete({ _id: companyId });
+    
     return res.send({
       data: {
         message: 'Company and all associated data has been been deleted.',
