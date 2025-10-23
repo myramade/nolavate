@@ -1,35 +1,31 @@
 import container from '../../container.js';
 import { getFormattedDate } from '../../services/helper.js';
+import { ObjectId } from 'mongodb';
 
 export default async function getOnboardingMedia(req, res, next) {
   const logger = container.make('logger');
   const userModel = container.make('models/user');
+  const transcriptionModel = container.make('models/transcriptions');
+  
   try {
     const userId = req.token.sub;
-    const userData = await userModel.findById(userId, {
-      matchMedia: true,
-      transcriptions: {
-        where: {
-          user: {
-            is: {
-              id: req.token.sub,
-            },
-          },
-        },
-        select: {
-          mediaId: true,
-          text: true,
-          summary: true,
-        },
-      },
-    });
-    if (!userData.matchMedia) {
+    
+    // Get user data with matchMedia - BaseModel handles ObjectId conversion
+    const userData = await userModel.findById(userId);
+    
+    if (!userData || !userData.matchMedia) {
       return res.status(204).send();
     }
+    
+    // Get transcriptions for this user separately
+    const transcriptions = await transcriptionModel.findMany({
+      userId: new ObjectId(userId)
+    });
+    
     const result = {};
 
     userData.matchMedia.forEach((media) => {
-      const match = userData.transcriptions.filter(
+      const match = transcriptions.filter(
         (t) => t.mediaId === media.id,
       );
       const data = {
@@ -46,6 +42,7 @@ export default async function getOnboardingMedia(req, res, next) {
         result[media.category] = [data];
       }
     });
+    
     res.send({
       data: result,
       details: {

@@ -15,13 +15,9 @@ import updateUserProfile from './updateUserProfile.js';
 // Multer upload middleware
 const uploadPhotos = container.make('upload')('images');
 const uploadMediaForProfile = container.make('upload')('images,videos');
-// Auth and upload wrapper for profile (supports both image and video)
+// Auth and upload wrapper for profile (supports both image and video) - BOTH candidates and recruiters
 const profileMediaWrapper = [
-  jwtAuth(
-    container.make('roles').user,
-    false,
-    container.make('roles').recruiter,
-  ),
+  jwtAuth(container.make('roles').user),
   uploadMediaForProfile.fields([
     { name: 'image', maxCount: 1 },
     { name: 'video', maxCount: 1 }

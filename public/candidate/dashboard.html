@@ -361,7 +361,7 @@
               <div style="text-align: center; padding: 40px 20px; border: 2px dashed var(--border-color); border-radius: 12px;">
                 <div style="font-size: 48px; margin-bottom: 12px;">🎥</div>
                 <p style="color: var(--text-light); margin-bottom: 16px;">No profile video uploaded yet</p>
-                <p style="color: var(--text-light); font-size: 13px;">Upload a video to introduce yourself to recruiters (max 10MB)</p>
+                <p style="color: var(--text-light); font-size: 13px;">Upload a video to introduce yourself to recruiters (up to 5 minutes, max 100MB)</p>
               </div>
             `}
           </div>
@@ -437,9 +437,9 @@
         return;
       }
 
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        showNotification('Video size must be less than 10MB', 'error');
+      // Validate file size (max 100MB for 5 min videos)
+      if (file.size > 100 * 1024 * 1024) {
+        showNotification('Video size must be less than 100MB (approx 5 minutes)', 'error');
         return;
       }
 

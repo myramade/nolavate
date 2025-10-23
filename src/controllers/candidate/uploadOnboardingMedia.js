@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import ObjectID from 'bson-objectid';
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import { getFormattedDate, skipUndefined } from '../../services/helper.js';
 
@@ -40,11 +41,10 @@ export default async function uploadMatchMedia(req, res, next) {
         mediaType,
       };
     };
-    const existingUserMatchMedia = await user.findById(userId, {
-      id: true,
-      name: true,
-      matchMedia: true,
-    });
+    
+    // Get user data - BaseModel now handles ObjectId conversion
+    const existingUserMatchMedia = await user.findById(userId);
+    
     // Category should only be INFO', 'EDUCATION', 'EXPERIENCE', or 'INTERESTS'
     let existingMedia = [];
     let existingMediaCount = 0;
@@ -70,20 +70,32 @@ export default async function uploadMatchMedia(req, res, next) {
         ...uploadedContent,
       }),
     );
-    // Save storage data to user document
+    
+    // Save storage data to user document - BaseModel handles ObjectId conversion
     const result = await user.updateById(
       userId,
       {
         matchMedia: existingMedia,
-      },
-      { id: true, email: true, matchMedia: true },
+      }
     );
-    // Send response
+    
+    // Helper to serialize ObjectId to string
+    const serializeId = (value) => {
+      if (!value) return null;
+      if (value instanceof ObjectId) return value.toString();
+      if (typeof value === 'object' && (value._id || value.id)) {
+        const id = value._id || value.id;
+        return id instanceof ObjectId ? id.toString() : String(id);
+      }
+      return String(value);
+    };
+
+    // Send response with serialized IDs
     res.send({
       data: {
         email: result.email,
         resourceUrl: uploadedContent.streamUrl,
-        resourceId: result.id,
+        resourceId: serializeId(result._id || result.id),
         message: 'Successfully uploaded file.',
       },
       details: {
@@ -91,6 +103,7 @@ export default async function uploadMatchMedia(req, res, next) {
       },
       generatedAt: getFormattedDate(),
     });
+    
     // Add transcribe job to queue
     transcribeAudioJobQueue.addJob(
       (
@@ -190,7 +203,7 @@ export default async function uploadMatchMedia(req, res, next) {
         fs,
         container.make('models/transcriptions'),
         {
-          userId,
+          userId: new ObjectId(userId),
           name: existingUserMatchMedia.name || req.token.name,
           sourceUrl: uploadedContent.streamUrl,
           sourceType: 'MATCHMEDIA',

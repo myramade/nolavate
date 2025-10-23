@@ -1,4 +1,5 @@
 import container from '../../container.js';
+import { ObjectId } from 'mongodb';
 import {
   getFormattedDate,
   isEmpty,
@@ -95,32 +96,37 @@ export default async function updateUserProfile(req, res, next) {
       });
     }
 
-    // Update user profile
+    // Update user profile - BaseModel now handles ObjectId conversion
     const result = await user.updateById(
       req.token.sub,
-      updateBody,
-      {
-        id: true,
-        name: true,
-        email: true,
-        photo: {
-          select: {
-            streamUrl: true,
-          },
-        },
-        video: {
-          select: {
-            streamUrl: true,
-          },
-        },
-        role: true,
-        updatedTime: true,
-      },
+      updateBody
     );
+
+    // Helper to convert ObjectId to string
+    const serializeId = (value) => {
+      if (!value) return null;
+      if (value instanceof ObjectId) return value.toString();
+      if (typeof value === 'object' && (value._id || value.id)) {
+        const id = value._id || value.id;
+        return id instanceof ObjectId ? id.toString() : String(id);
+      }
+      return String(value);
+    };
+
+    // Format response with simplified structure for MongoDB - convert ObjectIds to strings
+    const responseData = {
+      id: serializeId(result._id),
+      name: result.name,
+      email: result.email,
+      photo: result.photo || null,
+      video: result.video || null,
+      role: result.role,
+      updatedTime: result.updatedTime || new Date(),
+    };
 
     // send response
     res.send({
-      data: result,
+      data: responseData,
       details: {
         body: req.body,
       },
