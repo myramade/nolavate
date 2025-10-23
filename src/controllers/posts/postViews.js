@@ -1,29 +1,37 @@
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import { getFormattedDate } from '../../services/helper.js';
+import { toObjectId, serializeDocument } from '../../utils/mongoHelpers.js';
 
 export default async function updateViewCount(req, res, next) {
   const logger = container.make('logger');
   const post = container.make('models/post');
   const postViews = container.make('models/postviews');
   const userId = req.token.sub;
+  
   try {
+    // Convert IDs to ObjectId for queries
+    const userObjectId = toObjectId(userId);
+    const postObjectId = toObjectId(req.body.id);
+    
+    if (!userObjectId || !postObjectId) {
+      return res.status(400).send({
+        message: 'Invalid user ID or post ID'
+      });
+    }
+    
+    // Check if user already viewed this post  
+    // MongoDB query - direct field comparison
     const existingPostView = await postViews.findFirst(
       {
-        user: {
-          is: {
-            id: userId,
-          },
-        },
-        post: {
-          is: {
-            id: req.body.id,
-          },
-        },
+        userId: userObjectId,
+        postId: postObjectId
       },
       {
-        id: true,
-      },
+        _id: 1
+      }
     );
+    
     // The client should invoke this endpoint after a user
     // passed a view length threshold. If the user already
     // viewed a post just return 204 instead of an error.
@@ -32,28 +40,24 @@ export default async function updateViewCount(req, res, next) {
     if (existingPostView) {
       return res.status(204).send();
     }
-    // Update view count and model
+    
+    // Update view count and create post view record
+    // MongoDB: Direct field assignment, no "connect"
     const results = await Promise.all([
-      postViews.create(
-        {
-          user: {
-            connect: {
-              id: userId,
-            },
-          },
-          post: {
-            connect: {
-              id: req.body.id,
-            },
-          },
-        },
-        { id: true, postId: true },
-      ),
-      post.increment({ id: req.body.id }, 'views', 1),
+      postViews.create({
+        userId: userObjectId,
+        postId: postObjectId,
+        createdTime: new Date()
+      }),
+      post.increment({ _id: postObjectId }, 'views', 1)
     ]);
+    
+    // Serialize response - convert ObjectIds to strings
+    const updatedPost = serializeDocument(results[1]);
+    
     // send response
     return res.send({
-      data: results[1],
+      data: updatedPost,
       details: {
         body: req.body,
       },

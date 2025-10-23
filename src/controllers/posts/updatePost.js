@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import {
   getFormattedDate,
@@ -5,6 +6,7 @@ import {
   skipUndefined,
   toTitleCase,
 } from '../../services/helper.js';
+import { serializeDocument } from '../../utils/mongoHelpers.js';
 
 const handleSkills = async (req) => {
   let requiredSkills = [];
@@ -128,23 +130,20 @@ export default async function updatePost(req, res, next) {
   const logger = container.make('logger');
   const post = container.make('models/post');
   try {
-    // Get Post
+    // Get Post - MongoDB query
     const existingPost = await post.findById(req.body.id, {
-      id: true,
-      user: {
-        select: {
-          id: true,
-        },
-      },
+      _id: 1,
+      userId: 1
     });
     if (!existingPost) {
       return res.status(400).send({
-        message: 'Job skill IDs provided are not valid.',
+        message: 'Post not found.',
       });
     }
-    if (existingPost.user.id !== req.token.sub) {
+    // Check ownership - compare ObjectIds as strings
+    if (existingPost.userId && existingPost.userId.toString() !== req.token.sub) {
       return res.status(403).send({
-        message: 'Job skill IDs provided are not valid.',
+        message: 'You do not have permission to update this post.',
       });
     }
     // Handle required and optional skills
@@ -176,25 +175,14 @@ export default async function updatePost(req, res, next) {
       },
       true,
     );
-    // Update post
+    // Update post - MongoDB update by ID
     const results = await post.update(
-      {
-        id: req.body.id,
-        user: {
-          is: {
-            id: req.token.sub,
-          },
-        },
-      },
-      updateBody,
-      {
-        id: true,
-        updatedTime: true,
-      },
+      req.body.id,
+      updateBody
     );
-    // send results
+    // Serialize and send results
     res.send({
-      data: results,
+      data: serializeDocument(results),
       details: {
         body: req.body,
       },

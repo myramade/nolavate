@@ -1,9 +1,11 @@
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import {
   getFormattedDate,
   isEmpty,
   skipUndefined,
 } from '../../services/helper.js';
+import { toObjectId, serializeDocument } from '../../utils/mongoHelpers.js';
 
 export default async function updateCompany(req, res, next) {
   const logger = container.make('logger');
@@ -34,22 +36,21 @@ export default async function updateCompany(req, res, next) {
         count: 1,
       };
     }
-    // Find existing company by ID
-    const existingCompany = await company.findOne(
-      {
-        id: req.body.companyId,
-        AND: {
-          profileOwner: {
-            is: {
-              id: req.token.sub,
-            },
-          },
-        },
-      },
-      {
-        id: true,
-      },
-    );
+    // Find existing company by ID - MongoDB query
+    const companyObjectId = toObjectId(req.body.companyId);
+    const userObjectId = toObjectId(req.token.sub);
+    
+    if (!companyObjectId) {
+      return res.status(400).send({
+        message: 'Invalid company ID',
+      });
+    }
+    
+    const existingCompany = await company.findOne({
+      _id: companyObjectId,
+      profileOwnerId: userObjectId
+    });
+    
     if (!existingCompany) {
       return res.status(400).send({
         message: 'No company found or you cannot update this company.',
@@ -75,47 +76,23 @@ export default async function updateCompany(req, res, next) {
     if (isEmpty(updateBody)) {
       throw new Error('No data was provided for update.');
     }
-    const result = await company.update(
-      {
-        id: existingCompany.id,
-        AND: {
-          profileOwner: {
-            is: {
-              id: req.token.sub,
-            },
-          },
-        },
-      },
-      updateBody,
-      {
-        id: true,
-        name: true,
-        website: true,
-        industry: true,
-        logo: {
-          select: {
-            streamUrl: true,
-          },
-        },
-        numOfEmployees: true,
-        updatedTime: true,
-      },
-    );
+    // Update company - MongoDB update by ID
+    const result = await company.update(existingCompany._id, updateBody);
+    
     // Associate company to recruiter who created it
-    await user.updateById(
-      req.token.sub,
-      {
-        employer: {
-          connect: {
-            id: result.id,
-          },
-        },
-      },
-      { id: true },
-    );
+    await user.updateById(req.token.sub, {
+      employerId: result._id
+    });
+    
+    // Serialize and transform response
+    const serialized = serializeDocument(result);
+    if (serialized.logo && serialized.logo.streamUrl) {
+      serialized.logo = serialized.logo.streamUrl;
+    }
+    
     // send response
     res.send({
-      data: result,
+      data: serialized,
       details: {
         body: req.body,
       },
