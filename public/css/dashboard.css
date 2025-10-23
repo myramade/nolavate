@@ -6,17 +6,19 @@
 }
 
 :root {
-  --primary-color: #4169E1;
-  --primary-hover: #2952CC;
+  --primary-color: #2C2C2C;
+  --primary-hover: #1a1a1a;
+  --accent-color: #8B7355;
   --success-color: #48bb78;
   --danger-color: #f56565;
   --warning-color: #ed8936;
-  --text-dark: #1a202c;
-  --text-light: #718096;
-  --border-color: #E5E5EA;
-  --bg-light: #F8F9FA;
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --text-dark: #2C2C2C;
+  --text-light: #6B6B6B;
+  --text-lighter: #9CA3AF;
+  --border-color: #E8E8E8;
+  --bg-light: #FAF8F6;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 body {
@@ -48,13 +50,16 @@ body {
 
 .header-left h1 {
   font-size: 24px;
+  font-weight: 600;
   color: var(--text-dark);
   margin-bottom: 4px;
+  letter-spacing: -0.3px;
 }
 
 .header-left p {
   color: var(--text-light);
   font-size: 14px;
+  font-weight: 400;
 }
 
 .header-right {
@@ -177,7 +182,7 @@ body {
 
 .card-title {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-dark);
 }
 
@@ -224,12 +229,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  color: var(--primary-color);
+  font-weight: 600;
+  color: var(--text-dark);
+  border: 1.5px solid var(--border-color);
 }
 
 .job-info h3 {
   font-size: 16px;
+  font-weight: 600;
   margin-bottom: 4px;
   color: var(--text-dark);
 }
@@ -237,6 +244,7 @@ body {
 .company-name {
   color: var(--text-light);
   font-size: 14px;
+  font-weight: 400;
 }
 
 .job-meta {
@@ -252,6 +260,7 @@ body {
   border-radius: 16px;
   font-size: 12px;
   color: var(--text-light);
+  font-weight: 500;
 }
 
 .job-description {
@@ -274,7 +283,7 @@ body {
 }
 
 .salary {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--success-color);
 }
 
@@ -298,7 +307,7 @@ body {
   align-items: center;
   justify-content: center;
   color: white;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 24px;
 }
 
@@ -308,6 +317,7 @@ body {
 
 .match-info h3 {
   font-size: 16px;
+  font-weight: 600;
   margin-bottom: 4px;
 }
 
@@ -357,11 +367,13 @@ body {
 .empty-state-icon {
   font-size: 64px;
   margin-bottom: 16px;
-  opacity: 0.3;
+  opacity: 0.2;
+  color: var(--text-light);
 }
 
 .empty-state h3 {
   font-size: 18px;
+  font-weight: 600;
   margin-bottom: 8px;
   color: var(--text-dark);
 }
@@ -369,6 +381,7 @@ body {
 .empty-state p {
   color: var(--text-light);
   margin-bottom: 24px;
+  font-weight: 400;
 }
 
 /* Notification */

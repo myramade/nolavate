@@ -5,17 +5,19 @@
 }
 
 :root {
-  --primary-color: #4169E1;
-  --primary-hover: #2952CC;
-  --success-color: #34a853;
+  --primary-color: #2C2C2C;
+  --primary-hover: #1a1a1a;
+  --accent-color: #8B7355;
+  --success-color: #48bb78;
   --error-color: #d93025;
-  --text-primary: #1a1a1a;
-  --text-secondary: #666;
-  --border-color: #E5E5EA;
-  --background: #F8F9FA;
+  --text-primary: #2C2C2C;
+  --text-secondary: #6B6B6B;
+  --text-light: #9CA3AF;
+  --border-color: #E8E8E8;
+  --background: #FAF8F6;
   --card-bg: #ffffff;
-  --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.1);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 body {
@@ -49,7 +51,7 @@ body {
 
 .signup-card {
   background: var(--card-bg);
-  border-radius: 16px;
+  border-radius: 12px;
   box-shadow: var(--shadow);
   padding: 40px 32px;
   transition: box-shadow 0.3s ease;
@@ -62,16 +64,17 @@ body {
 
 h1 {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 8px;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
 }
 
 .subtitle {
   color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.5;
+  font-weight: 400;
 }
 
 .social-auth {
@@ -103,9 +106,9 @@ h1 {
 }
 
 .google-btn:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  background: #f8f9fa;
-  border-color: #c6c6c6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: #fafafa;
+  border-color: #d0d0d0;
 }
 
 .apple-btn {
@@ -156,7 +159,7 @@ h1 {
 
 label {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-primary);
 }
 
@@ -170,17 +173,18 @@ select {
   font-family: inherit;
   transition: all 0.2s ease;
   background: var(--card-bg);
+  color: var(--text-primary);
 }
 
 input:focus,
 select:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(65, 105, 225, 0.1);
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(44, 44, 44, 0.06);
 }
 
 input::placeholder {
-  color: #999;
+  color: var(--text-light);
 }
 
 .password-wrapper {
@@ -194,17 +198,18 @@ input::placeholder {
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: var(--primary-color);
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
-  transition: background 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .toggle-password:hover {
-  background: rgba(65, 105, 225, 0.08);
+  color: var(--text-primary);
+  background: rgba(44, 44, 44, 0.04);
 }
 
 .error-message {
@@ -242,7 +247,7 @@ input.error {
 
 .submit-btn:hover:not(:disabled) {
   background: var(--primary-hover);
-  box-shadow: 0 4px 12px rgba(65, 105, 225, 0.3);
+  box-shadow: 0 4px 12px rgba(44, 44, 44, 0.2);
 }
 
 .submit-btn:active:not(:disabled) {
@@ -273,7 +278,7 @@ input.error {
 }
 
 .terms a {
-  color: var(--primary-color);
+  color: var(--text-primary);
   text-decoration: none;
   font-weight: 500;
 }
@@ -292,7 +297,7 @@ input.error {
 }
 
 .login-link a {
-  color: var(--primary-color);
+  color: var(--text-primary);
   text-decoration: none;
   font-weight: 600;
 }
@@ -309,12 +314,13 @@ input.error {
 
 .forgot-password a {
   font-size: 14px;
-  color: var(--primary-color);
+  color: var(--text-secondary);
   text-decoration: none;
   font-weight: 500;
 }
 
 .forgot-password a:hover {
+  color: var(--text-primary);
   text-decoration: underline;
 }
 
@@ -325,7 +331,7 @@ input.error {
   max-width: 400px;
   background: var(--card-bg);
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   padding: 16px 20px;
   display: none;
   animation: slideIn 0.3s ease;

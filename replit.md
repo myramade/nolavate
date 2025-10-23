@@ -23,17 +23,20 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 
 ### UI/UX Decisions
 - Mobile-first responsive design for all frontend pages (sign-up, login, dashboards).
-- Professional design system with royal blue (#4169E1) primary color and light gray (#F8F9FA) background.
-- Clean, minimal aesthetic with white cards and subtle shadows.
+- Minimal, professional design system with warm neutral color palette.
+- Clean aesthetic with white cards and subtle shadows.
 - Touch-friendly buttons (48px minimum tap targets).
 - Real-time form validation and robust error handling.
 - Role-based content display for Candidate and Recruiter dashboards.
 
 **Design Tokens:**
-- Primary Color: `#4169E1` (Royal Blue)
-- Primary Hover: `#2952CC` (Dark Blue)
-- Background: `#F8F9FA` (Light Gray)
-- Border: `#E5E5EA`
+- Primary Color: `#2C2C2C` (Charcoal Gray)
+- Primary Hover: `#1a1a1a` (Dark Gray)
+- Accent Color: `#8B7355` (Warm Brown)
+- Background: `#FAF8F6` (Warm Off-White)
+- Text Primary: `#2C2C2C` (Charcoal)
+- Text Secondary: `#6B6B6B` (Medium Gray)
+- Border: `#E8E8E8` (Light Gray)
 - Card Background: `#FFFFFF` (White)
 - Shadows: Soft, minimal for professional look
 
