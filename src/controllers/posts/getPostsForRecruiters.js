@@ -20,7 +20,7 @@ const createProfileSummary = (resumeData) => {
 export default async function getPostsForRecruiters(req, res, next) {
   const logger = container.make('logger');
   const user = container.make('models/user');
-  const transcription = container.make('models/transcriptions');
+  const transcription = container.make('models/transcription');
   const jobSkill = container.make('models/jobskill');
   try {
     // Check if database is connected

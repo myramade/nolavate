@@ -5,7 +5,7 @@ import { ObjectId } from 'mongodb';
 export default async function getOnboardingMedia(req, res, next) {
   const logger = container.make('logger');
   const userModel = container.make('models/user');
-  const transcriptionModel = container.make('models/transcriptions');
+  const transcriptionModel = container.make('models/transcription');
   
   try {
     const userId = req.token.sub;

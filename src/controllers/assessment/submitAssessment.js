@@ -36,7 +36,7 @@ export default async function submitAssessment(req, res, next) {
   const assessment = container.make('models/assessment');
   const user = container.make('models/user');
   const token = req.token;
-  const transcription = container.make('models/transcriptions');
+  const transcription = container.make('models/transcription');
   const jobQueue = container.make('jobQueue')('build-profile');
   const openAI = container.make('openai-create-profile');
   try {

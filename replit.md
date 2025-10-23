@@ -104,3 +104,19 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - **BaseModel Enhancement**: Added `findManyAnd()` method for MongoDB $and queries (previously missing)
 - **Impact**: Resolved internal server errors that prevented recruiters from viewing prospects, matches, job posts, and creating companies
 - **Note**: All MongoDB queries now properly convert string IDs from JWT tokens to ObjectId before database operations
+
+### Candidate Module MongoDB Migration (October 23, 2025)
+- **Critical Access Control Fix**: Fixed `/api/v1/web/profile` endpoint middleware to allow candidates (was recruiter-only)
+  - Previously candidates could NOT upload profile photos/videos due to incorrect middleware restriction
+  - Now both candidates and recruiters can upload media to their profiles
+- **Video Upload Enhancement**: Increased video file limit from 10MB to 100MB to support ~5 minute videos at reasonable quality
+- **ObjectId Serialization**: All candidate controllers now properly serialize MongoDB ObjectId instances to strings before sending to clients
+  - Added defensive serialization helpers to prevent client-side JSON parsing errors
+  - Affects: `updateUserProfile.js`, `uploadOnboardingMedia.js`, `respondToJobOffer.js`
+- **Fixed Controllers**:
+  - `updateUserProfile.js`: Removed Prisma select syntax, added `serializeId()` helper for string conversion
+  - `uploadOnboardingMedia.js`: Converted to MongoDB, added ObjectId serialization for resourceId
+  - `respondToJobOffer.js`: Safe ID extraction with defensive coding, recursive `serializeResponse()` for all nested ObjectIds
+  - `getOnboardingMedia.js`: Separated complex Prisma nested queries into simple MongoDB queries (user query + transcriptions query)
+- **Impact**: Candidates can now fully manage their profiles with photo/video uploads, respond to job offers, and use all dashboard features
+- **Status**: All candidate dashboard features operational and architect-approved

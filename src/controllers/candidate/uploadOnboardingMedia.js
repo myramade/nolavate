@@ -201,7 +201,7 @@ export default async function uploadMatchMedia(req, res, next) {
         userId,
         logger,
         fs,
-        container.make('models/transcriptions'),
+        container.make('models/transcription'),
         {
           userId: new ObjectId(userId),
           name: existingUserMatchMedia.name || req.token.name,
