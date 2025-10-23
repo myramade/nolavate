@@ -59,9 +59,12 @@ router.post('/register', validateRequest, async (req, res) => {
       throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
     }
     
+    // Convert ObjectId to string for JWT and response
+    const userId = user._id.toString();
+    
     const token = jwt.sign(
       { 
-        sub: user._id,
+        sub: userId,
         email: user.email,
         name: user.name,
         role: user.role,
@@ -75,7 +78,7 @@ router.post('/register', validateRequest, async (req, res) => {
       data: {
         accessToken: token,
         user: {
-          id: user._id,
+          id: userId,
           email: user.email,
           name: user.name,
           role: user.role,
@@ -125,9 +128,12 @@ router.post('/login', validateRequest, async (req, res) => {
       throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
     }
     
+    // Convert ObjectId to string for JWT and response
+    const userId = user._id.toString();
+    
     const token = jwt.sign(
       { 
-        sub: user._id,
+        sub: userId,
         email: user.email,
         name: user.name,
         role: user.role,
@@ -141,7 +147,7 @@ router.post('/login', validateRequest, async (req, res) => {
       data: {
         accessToken: token,
         user: {
-          id: user._id,
+          id: userId,
           email: user.email,
           name: user.name,
           role: user.role,
@@ -230,9 +236,12 @@ router.post('/google', validateRequest, async (req, res) => {
       throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
     }
     
+    // Convert ObjectId to string for JWT and response
+    const userId = user._id.toString();
+    
     const token = jwt.sign(
       { 
-        sub: user._id,
+        sub: userId,
         email: user.email,
         name: user.name,
         role: user.role,
@@ -246,7 +255,7 @@ router.post('/google', validateRequest, async (req, res) => {
       data: {
         accessToken: token,
         user: {
-          id: user._id,
+          id: userId,
           email: user.email,
           name: user.name,
           role: user.role,
@@ -331,9 +340,12 @@ router.post('/apple', validateRequest, async (req, res) => {
       throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
     }
     
+    // Convert ObjectId to string for JWT and response
+    const userId = user._id.toString();
+    
     const token = jwt.sign(
       { 
-        sub: user._id,
+        sub: userId,
         email: user.email,
         name: user.name,
         role: user.role,
@@ -347,7 +359,7 @@ router.post('/apple', validateRequest, async (req, res) => {
       data: {
         accessToken: token,
         user: {
-          id: user._id,
+          id: userId,
           email: user.email,
           name: user.name,
           role: user.role,
@@ -387,9 +399,12 @@ router.post('/forgot-password', validateRequest, async (req, res) => {
       throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
     }
     
+    // Convert ObjectId to string for JWT
+    const userId = user._id.toString();
+    
     const resetToken = jwt.sign(
       { 
-        sub: user._id,
+        sub: userId,
         email: user.email,
         type: 'password_reset'
       },

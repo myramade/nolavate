@@ -136,3 +136,18 @@ The API follows a layered architecture: `Routes → Controllers → Services →
   - All controller model references use `models/transcription` (singular, matching container registry)
 - **Impact**: Cleaner codebase, no ORM overhead, direct MongoDB operations throughout
 - **Status**: Server running successfully with MongoDB native driver only
+
+### Authentication ObjectId Serialization Fix (October 23, 2025)
+- **Critical Production Bug Fix**: Fixed internal server error on registration endpoint in production (Digital Ocean)
+- **Root Cause**: MongoDB ObjectId instances were being returned directly in JSON responses and JWT tokens, causing serialization failures
+- **Fixed Endpoints**:
+  - `POST /api/v1/auth/register` - User registration with email/password
+  - `POST /api/v1/auth/login` - User login
+  - `POST /api/v1/auth/google` - Google OAuth authentication
+  - `POST /api/v1/auth/apple` - Apple Sign-In authentication
+  - `POST /api/v1/auth/forgot-password` - Password reset token generation
+- **Solution**: All ObjectId instances now converted to strings using `.toString()` before:
+  - Inclusion in JWT token `sub` claim
+  - Inclusion in API response `user.id` field
+- **Testing**: Verified registration and login endpoints working correctly with string IDs
+- **Impact**: Users can now successfully register and login on production (Digital Ocean deployment)
