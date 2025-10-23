@@ -399,7 +399,7 @@ router.post('/forgot-password', validateRequest, async (req, res) => {
 
     // Store reset token and expiry in user record
     await container.make('models/user').update(
-      { _id: user._id },
+      user._id,
       {
         resetPasswordToken: resetToken,
         resetPasswordExpires: new Date(Date.now() + 3600000) // 1 hour
@@ -410,13 +410,15 @@ router.post('/forgot-password', validateRequest, async (req, res) => {
     const resetUrl = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
     
     // TODO: Send reset URL via email in production
-    // For development/testing, log to console only (DO NOT return in response for security)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('\n=== PASSWORD RESET LINK (DEV ONLY) ===');
+    // For development/testing, log to console (DO NOT return in response for security)
+    // Show reset link in development or Replit environment (when no email service is configured)
+    const isReplit = process.env.REPL_ID || process.env.REPLIT_DB_URL;
+    if (process.env.NODE_ENV === 'development' || isReplit) {
+      console.log('\n=== PASSWORD RESET LINK ===');
       console.log(`Email: ${email}`);
       console.log(`Reset URL: ${resetUrl}`);
       console.log(`Expires in: 1 hour`);
-      console.log('=====================================\n');
+      console.log('===========================\n');
     }
     
     // Always return generic success message for security
@@ -483,7 +485,7 @@ router.post('/reset-password', validateRequest, async (req, res) => {
 
     // Update password and clear reset token
     await container.make('models/user').update(
-      { _id: user._id },
+      user._id,
       {
         password: hashedPassword,
         resetPasswordToken: null,

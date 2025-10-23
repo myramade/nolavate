@@ -85,3 +85,9 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - **Scoring Algorithm**: Trait-based scoring with normalized 0-100 scores, intelligent personality type detection
 - **Database Seeds**: Scripts for populating questions (`scripts/seeds/assessmentQuestions.js`) and profiles (`scripts/seeds/personalityProfiles.js`)
 - **Bug Fixes**: Resolved ID type mismatch, fixed MongoDB projections, added comprehensive error handling
+
+### Password Reset Implementation (October 23, 2025)
+- **Fixed** forgot password functionality - reset tokens now properly saved to database
+- **Enhanced** reset link visibility in Replit environment (logs displayed in console during development)
+- **Corrected** BaseModel API calls in auth controllers (`update(id, data)` instead of `update({_id}, data)`)
+- **Verified** complete flow: request reset → receive token → reset password → login with new credentials
