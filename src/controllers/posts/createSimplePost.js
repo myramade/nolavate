@@ -1,5 +1,6 @@
 import ObjectID from 'bson-objectid';
 import container from '../../container.js';
+import { ObjectId } from 'mongodb';
 import {
   getFormattedDate,
   skipUndefined,
@@ -26,16 +27,8 @@ export default async function createSimplePost(req, res, next) {
       });
     }
 
-    const userDocument = await user.findById(req.token.sub, {
-      id: true,
-      name: true,
-      employer: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    });
+    // Get user document with company info
+    const userDocument = await user.findById(new ObjectId(req.token.sub));
 
     if (!userDocument) {
       return res.status(404).send({
@@ -43,7 +36,7 @@ export default async function createSimplePost(req, res, next) {
       });
     }
 
-    if (!userDocument.employer && req.token.roleSubtype === 'RECRUITER') {
+    if (!userDocument.employerId && req.token.roleSubtype === 'RECRUITER') {
       return res.status(400).send({
         message: 'Only recruiters with a company can create job posts. Please create your company profile first.',
       });
@@ -82,21 +75,14 @@ export default async function createSimplePost(req, res, next) {
       currency: req.body.currency || 'USD',
     } : undefined;
 
+    // Create post with MongoDB syntax
     const postData = skipUndefined({
       title: req.body.positionTitle,
       positionTitle: req.body.positionTitle,
       description: req.body.description,
       postType: 'JOB',
-      user: {
-        connect: {
-          id: req.token.sub,
-        },
-      },
-      company: userDocument.employer ? {
-        connect: {
-          id: userDocument.employer.id,
-        },
-      } : undefined,
+      userId: new ObjectId(req.token.sub),
+      companyId: userDocument.employerId ? new ObjectId(userDocument.employerId) : undefined,
       location: req.body.location ? [req.body.location] : undefined,
       employmentType: req.body.employmentType || undefined,
       compensation: compensationData,
@@ -106,22 +92,25 @@ export default async function createSimplePost(req, res, next) {
       educationLevel: req.body.educationLevel || undefined,
       benefits: req.body.benefits ? req.body.benefits.split(',').map(b => b.trim()).filter(Boolean) : undefined,
       applicationUrl: req.body.applicationUrl || undefined,
+      views: 0,
+      likes: 0,
+      activeHiring: true,
       createdTime: new Date(),
     });
 
-    const result = await post.create(postData, {
-      id: true,
-      title: true,
-      positionTitle: true,
-      description: true,
-      location: true,
-      employmentType: true,
-      compensation: true,
-      createdTime: true,
-    });
+    const result = await post.create(postData);
 
     res.send({
-      data: result,
+      data: {
+        id: result._id,
+        title: result.title,
+        positionTitle: result.positionTitle,
+        description: result.description,
+        location: result.location,
+        employmentType: result.employmentType,
+        compensation: result.compensation,
+        createdTime: result.createdTime,
+      },
       message: 'Job post created successfully!',
       details: {
         userId: req.token.sub,

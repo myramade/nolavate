@@ -1,5 +1,6 @@
 import container from '../../container.js';
 import { getFormattedDate } from '../../services/helper.js';
+import { ObjectId } from 'mongodb';
 
 export default async function getMyCompany(req, res, next) {
   const logger = container.make('logger');
@@ -17,7 +18,7 @@ export default async function getMyCompany(req, res, next) {
       });
     }
 
-    const result = await company.findOne({ profileOwnerId: req.token.sub });
+    const result = await company.findOne({ profileOwnerId: new ObjectId(req.token.sub) });
 
     if (result && result.logo && typeof result.logo === 'object') {
       result.logo = result.logo.streamUrl || result.logo;

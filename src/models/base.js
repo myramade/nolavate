@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongodb';
+
 // In-memory storage for when database is not available
 const memoryStorage = new Map();
 
@@ -55,8 +57,10 @@ export default class BaseModel {
 
   async findById(id, select = {}) {
     if (!this.db) return null;
+    // Ensure id is an ObjectId for MongoDB query
+    const objectId = (id instanceof ObjectId) ? id : new ObjectId(id);
     return await this.db.collection(this.collection).findOne(
-      { _id: id },
+      { _id: objectId },
       { projection: select }
     );
   }
@@ -120,9 +124,11 @@ export default class BaseModel {
 
   async update(id, updateData) {
     if (!this.db) return { ...updateData, _id: id };
+    // Ensure id is an ObjectId for MongoDB query
+    const objectId = (id instanceof ObjectId) ? id : new ObjectId(id);
     try {
       const result = await this.db.collection(this.collection).updateOne(
-        { _id: id },
+        { _id: objectId },
         { $set: updateData }
       );
       if (result.modifiedCount > 0) {
