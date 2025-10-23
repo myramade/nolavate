@@ -59,7 +59,7 @@ export default async function getPostsForRecruiters(req, res, next) {
       }
     }
     // Build prisma queries
-    const prismaQuery = skipUndefined({
+    const mongoQuery = skipUndefined({
       // personality: {
       //   equals: userData.personality
       // },
@@ -84,7 +84,7 @@ export default async function getPostsForRecruiters(req, res, next) {
     let results = [];
     try {
       results = await user.findMany(
-        prismaQuery,
+        mongoQuery,
         {
           id: true,
           email: true,

@@ -36,7 +36,7 @@ export default async function getPosts(req, res, next) {
       jobSkillIdsToNames = jobSkillIdsToNames.map((skill) => skill.name);
     }
     // Build prisma queries
-    const prismaQuery = skipUndefined({
+    const mongoQuery = skipUndefined({
       postType: 'JOB',
       archive: false,
       // personalityPreference: {
@@ -73,9 +73,9 @@ export default async function getPosts(req, res, next) {
           : undefined,
       ],
     });
-    prismaQuery.OR = prismaQuery.OR.filter((or) => or !== undefined);
-    if (prismaQuery.OR.length === 0) {
-      prismaQuery.OR = undefined;
+    mongoQuery.OR = mongoQuery.OR.filter((or) => or !== undefined);
+    if (mongoQuery.OR.length === 0) {
+      mongoQuery.OR = undefined;
     }
     // Get list of job skill
     const jobSkills = await jobSkill.findMany(
@@ -97,7 +97,7 @@ export default async function getPosts(req, res, next) {
     );
     // Get results
     const results = await post.findMany(
-      prismaQuery,
+      mongoQuery,
       {
         id: true,
         title: true,

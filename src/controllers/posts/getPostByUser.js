@@ -35,7 +35,7 @@ export default async function getPostsByUserId(req, res, next) {
     
     let results = [];
     try {
-      // Simplified MongoDB query without nested Prisma syntax
+      // Simplified MongoDB query without nested syntax
       results = await post.findMany(
         query,
         {}, // No complex projection for now
