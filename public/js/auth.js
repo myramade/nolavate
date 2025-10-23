@@ -152,12 +152,6 @@ if (signupForm) {
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearAllErrors();
-    
-    // Hide CAPTCHA error initially
-    const captchaError = document.getElementById('captchaError');
-    if (captchaError) {
-      captchaError.classList.remove('show');
-    }
 
     const submitBtn = document.getElementById('submitBtn');
     const formData = {
@@ -185,17 +179,6 @@ if (signupForm) {
       hasError = true;
     }
 
-    // Validate CAPTCHA
-    const recaptchaResponse = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
-    if (!recaptchaResponse) {
-      if (captchaError) {
-        captchaError.classList.add('show');
-      }
-      hasError = true;
-    } else {
-      formData.recaptchaToken = recaptchaResponse;
-    }
-
     if (hasError) return;
 
     setLoading(submitBtn, true);
@@ -212,11 +195,6 @@ if (signupForm) {
       console.error('Registration error:', error);
       showNotification(error.message || 'Failed to create account. Please try again.', 'error');
       setLoading(submitBtn, false);
-      
-      // Reset CAPTCHA on error
-      if (typeof grecaptcha !== 'undefined') {
-        grecaptcha.reset();
-      }
     }
   });
 }

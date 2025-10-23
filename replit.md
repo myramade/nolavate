@@ -47,8 +47,7 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - **Job Posting**: Recruiters can create and import job postings with comprehensive details and skill management.
 - **Company Management**: Recruiters can view and create company profiles, with AI-powered lookup for company details.
 - **API Versioning**: All API routes use `/api/v1` prefix for versioning, maintaining backward compatibility.
-- **AI Disclosure**: Prominent AI-powered platform notice on the signup page.
-- **Bot Protection**: Google reCAPTCHA v2 integrated into the signup process.
+- **AI Disclosure**: Prominent AI-powered platform notice on the signup page with acknowledgement checkbox requirement.
 
 ### Feature Specifications
 - **Candidate Dashboard**: Features include browsing job postings, viewing matched job opportunities with scores, taking/retaking personality assessments, and managing profile information.
