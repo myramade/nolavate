@@ -72,19 +72,15 @@ export default async function getBaseQuestions(req, res, next) {
     const results = await assessmentQuestions.findMany(
       {},
       {
-        id: true,
-        question: true,
-        answers: {
-          select: {
-            id: true,
-            text: true,
-          },
-        },
+        id: 1,
+        question: 1,
+        answers: 1,
+        order: 1
       },
       -1,
       0,
       'order',
-      'desc',
+      'asc',
     );
     
     // Use mock data if database returns empty results

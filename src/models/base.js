@@ -123,6 +123,35 @@ export default class BaseModel {
     return await this.delete(id);
   }
 
+  async deleteMany(query = {}) {
+    if (!this.db) {
+      const storage = memoryStorage.get(this.collection);
+      // Delete matching records from memory storage
+      let deletedCount = 0;
+      for (const [id, record] of storage.entries()) {
+        let matches = true;
+        for (const [key, value] of Object.entries(query)) {
+          if (record[key] !== value) {
+            matches = false;
+            break;
+          }
+        }
+        if (matches) {
+          storage.delete(id);
+          deletedCount++;
+        }
+      }
+      return { deletedCount };
+    }
+    try {
+      const result = await this.db.collection(this.collection).deleteMany(query);
+      return { deletedCount: result.deletedCount };
+    } catch (error) {
+      console.error(`Database error in ${this.collection}.deleteMany:`, error.message);
+      throw error;
+    }
+  }
+
   async count(where = {}) {
     if (!this.db) return 0;
     return await this.db.collection(this.collection).countDocuments(where);

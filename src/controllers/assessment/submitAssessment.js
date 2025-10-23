@@ -5,6 +5,7 @@ import {
 } from '../../../algorithms/scoring.js';
 import container from '../../container.js';
 import { getFormattedDate, skipUndefined } from '../../services/helper.js';
+import { analyzeDISCAssessment } from '../../services/discScoring.js';
 
 const saveUserData = async (openAIResponse, userId, assessmentId) => {
   const parsedData = JSON.parse(openAIResponse);
@@ -43,20 +44,14 @@ export default async function submitAssessment(req, res, next) {
     const questions = await assessmentQuestions.findMany(
       {},
       {
-        id: true,
-        question: true,
-        answers: {
-          select: {
-            id: true,
-            text: true,
-            trait: true,
-            score: true,
-          },
-        },
+        id: 1,
+        question: 1,
+        answers: 1,
+        order: 1
       },
       -1,
       0,
-      'createdTime',
+      'order',
       'asc',
     );
     const personalities = await personalityModel.findMany(
@@ -76,66 +71,64 @@ export default async function submitAssessment(req, res, next) {
       'createdTime',
       'asc',
     );
-    // Use mock personality data if database is empty
-    let personalitiesData = personalities;
-    if (personalities.length === 0) {
-      logger.info('Using mock personality data');
-      personalitiesData = [{
-        id: 'mock-personality-1',
-        key: 'ENFP',
-        title: 'The Champion',
-        detail: 'You are enthusiastic, creative, and sociable. You value inspiration and focus on making your dreams a reality. You are energetic and see possibilities in everything.',
-        strengths: [
-          'Excellent communication skills',
-          'Creative and innovative thinking',
-          'Strong people skills and emotional intelligence',
-          'Adaptable and flexible',
-          'Enthusiastic and motivational'
-        ],
-        values: ['Creativity', 'Independence', 'Collaboration', 'Growth'],
-        recommendedJobs: [
-          'Marketing Manager',
-          'Human Resources',
-          'Event Coordinator',
-          'Teacher',
-          'Consultant',
-          'Sales Representative',
-          'Public Relations',
-          'Social Media Manager'
-        ],
-        companyCulture: 'Dynamic, collaborative environments where creativity and innovation are valued'
-      }];
+    // Get user answers
+    const answers = req.body.answers || [];
+    
+    if (answers.length === 0) {
+      return res.status(400).json({
+        message: 'No answers provided',
+        generatedAt: getFormattedDate()
+      });
     }
 
-    // Calculate personality based on answers (simplified for mock)
-    const answers = req.body.answers || [];
-    let personalityType = personalitiesData[0];
+    // Use DISC scoring algorithm to analyze assessment
+    const analysisResult = analyzeDISCAssessment(answers, questions, personalities);
     
-    // Simple scoring logic for mock: count Agree/Strongly Agree responses
-    const agreeCount = answers.filter(a => a.answerId >= 4).length;
-    if (agreeCount > 15 && personalitiesData.length > 1) {
-      personalityType = personalitiesData[1];
+    if (!analysisResult.profile) {
+      logger.error('No personality profile matched');
+      return res.status(500).json({
+        message: 'Unable to determine personality type',
+        generatedAt: getFormattedDate()
+      });
     }
+
+    const personalityType = analysisResult.profile;
 
     // Save assessment to database
     try {
-      await assessment.create({
+      // Delete any existing assessments for this user
+      await assessment.deleteMany({ userId: token.sub });
+      
+      // Create new assessment record
+      const assessmentRecord = await assessment.create({
         userId: token.sub,
+        personalityKey: analysisResult.personalityType,
         personality: personalityType,
+        scores: analysisResult.scores,
         response: answers,
         isBuildingPersonalityProfile: false,
         createdTime: new Date()
       });
+
+      // Update user profile with personality
+      await user.updateById(token.sub, {
+        personalityKey: analysisResult.personalityType,
+        personalityScores: analysisResult.scores
+      });
+
+      logger.info(`Assessment completed for user ${token.sub}: ${analysisResult.personalityType}`);
     } catch (err) {
-      // In mock mode, this might fail but we continue
-      logger.warn('Could not save assessment (using mock data):', err.message);
+      logger.error('Error saving assessment:', err.message);
+      // Continue to return results even if save fails
     }
 
-    // Return results
+    // Return results with full personality profile and DISC scores
     res.json({
       data: {
         personality: personalityType,
-        takenAt: new Date().toLocaleDateString(),
+        personalityType: analysisResult.personalityType,
+        scores: analysisResult.scores,
+        takenAt: new Date().toISOString(),
         createdTime: new Date()
       },
       message: 'Assessment submitted successfully',

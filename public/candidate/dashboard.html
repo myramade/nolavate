@@ -284,10 +284,10 @@
       try {
         await apiCall('/api/v1/assessment/submit', {
           method: 'POST',
-          body: JSON.stringify({ response: answers })
+          body: JSON.stringify({ answers: answers })
         });
         
-        showNotification('Assessment submitted! Your profile is being analyzed...', 'success');
+        showNotification('Assessment completed! Analyzing your personality profile...', 'success');
         setTimeout(() => loadAssessment(), 2000);
       } catch (error) {
         showError('assessmentContainer', error.message);
