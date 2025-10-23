@@ -20,8 +20,13 @@ export default class BaseModel {
       storage.set(id, record);
       return record;
     }
-    const result = await this.db.collection(this.collection).insertOne(data);
-    return { ...data, _id: result.insertedId };
+    try {
+      const result = await this.db.collection(this.collection).insertOne(data);
+      return { ...data, _id: result.insertedId };
+    } catch (error) {
+      console.error(`Database error in ${this.collection}.create:`, error.message);
+      throw error;
+    }
   }
 
   async findOne(query) {
@@ -40,7 +45,12 @@ export default class BaseModel {
       }
       return null;
     }
-    return await this.db.collection(this.collection).findOne(query);
+    try {
+      return await this.db.collection(this.collection).findOne(query);
+    } catch (error) {
+      console.error(`Database error in ${this.collection}.findOne:`, error.message);
+      throw error;
+    }
   }
 
   async findById(id, select = {}) {
@@ -84,14 +94,19 @@ export default class BaseModel {
 
   async update(id, updateData) {
     if (!this.db) return { ...updateData, _id: id };
-    const result = await this.db.collection(this.collection).updateOne(
-      { _id: id },
-      { $set: updateData }
-    );
-    if (result.modifiedCount > 0) {
-      return await this.findById(id);
+    try {
+      const result = await this.db.collection(this.collection).updateOne(
+        { _id: id },
+        { $set: updateData }
+      );
+      if (result.modifiedCount > 0) {
+        return await this.findById(id);
+      }
+      return null;
+    } catch (error) {
+      console.error(`Database error in ${this.collection}.update:`, error.message);
+      throw error;
     }
-    return null;
   }
 
   async updateById(id, updateData) {
