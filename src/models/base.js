@@ -188,4 +188,77 @@ export default class BaseModel {
     if (!this.db) return 0;
     return await this.db.collection(this.collection).countDocuments(where);
   }
+
+  async findFirst(where = {}, select = {}, sortBy = null, order = 'asc', limit = 1) {
+    if (!this.db) return null;
+    const query = this.db.collection(this.collection).find(where);
+    
+    if (Object.keys(select).length > 0) {
+      query.project(select);
+    }
+    
+    if (sortBy) {
+      query.sort({ [sortBy]: order === 'desc' ? -1 : 1 });
+    }
+    
+    query.limit(limit);
+    
+    const results = await query.toArray();
+    return results.length > 0 ? results[0] : null;
+  }
+
+  async createMany(records) {
+    if (!this.db) {
+      const storage = memoryStorage.get(this.collection);
+      const insertedRecords = [];
+      for (const record of records) {
+        const id = `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const newRecord = { ...record, _id: id };
+        storage.set(id, newRecord);
+        insertedRecords.push(newRecord);
+      }
+      return { insertedCount: insertedRecords.length, insertedRecords };
+    }
+    try {
+      const result = await this.db.collection(this.collection).insertMany(records);
+      return { insertedCount: result.insertedCount, insertedIds: result.insertedIds };
+    } catch (error) {
+      console.error(`Database error in ${this.collection}.createMany:`, error.message);
+      throw error;
+    }
+  }
+
+  async increment(where, field, amount = 1) {
+    if (!this.db) return null;
+    try {
+      const result = await this.db.collection(this.collection).updateOne(
+        where,
+        { $inc: { [field]: amount } }
+      );
+      if (result.modifiedCount > 0) {
+        return await this.findOne(where);
+      }
+      return null;
+    } catch (error) {
+      console.error(`Database error in ${this.collection}.increment:`, error.message);
+      throw error;
+    }
+  }
+
+  async decrement(where, field, amount = 1) {
+    if (!this.db) return null;
+    try {
+      const result = await this.db.collection(this.collection).updateOne(
+        where,
+        { $inc: { [field]: -amount } }
+      );
+      if (result.modifiedCount > 0) {
+        return await this.findOne(where);
+      }
+      return null;
+    } catch (error) {
+      console.error(`Database error in ${this.collection}.decrement:`, error.message);
+      throw error;
+    }
+  }
 }
