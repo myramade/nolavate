@@ -91,3 +91,16 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - **Enhanced** reset link visibility in Replit environment (logs displayed in console during development)
 - **Corrected** BaseModel API calls in auth controllers (`update(id, data)` instead of `update({_id}, data)`)
 - **Verified** complete flow: request reset → receive token → reset password → login with new credentials
+
+### Recruiter Module MongoDB Migration (October 23, 2025)
+- **Critical Fix**: Completely refactored all recruiter controllers from Prisma ORM syntax to native MongoDB driver syntax
+- **ID Type Mismatch Resolution**: Added ObjectId coercion for all user/post/company ID comparisons to prevent silent query failures
+- **Fixed Controllers**:
+  - `getProspects.js`: Converted nested Prisma queries to MongoDB, fixed req.body/req.query mismatch, added ObjectId wrapping
+  - `getMyMatches.js`: Replaced Prisma syntax with MongoDB queries, added proper ObjectId handling for candidate/recruiter IDs
+  - `getPostByUser.js`: Simplified to use MongoDB native queries with ObjectId conversion for userId
+  - `createCompany.js`: Removed Prisma connect/create syntax, now uses direct field assignments with ObjectId for profileOwnerId and employerId
+  - `createCompanyV2.js`: Converted Perplexity AI integration to MongoDB syntax with proper ObjectId handling
+- **BaseModel Enhancement**: Added `findManyAnd()` method for MongoDB $and queries (previously missing)
+- **Impact**: Resolved internal server errors that prevented recruiters from viewing prospects, matches, job posts, and creating companies
+- **Note**: All MongoDB queries now properly convert string IDs from JWT tokens to ObjectId before database operations
