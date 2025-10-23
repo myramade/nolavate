@@ -46,7 +46,7 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - **Static File Serving**: Express serves static HTML, CSS, and JS files for the frontend.
 - **API Utilities**: Shared JavaScript utilities for API calls, authentication, error handling, and formatting on the client-side.
 - **File Uploads**: Secure profile photo and video uploads integrated with Supabase storage.
-- **Assessment Flow**: Interactive personality assessment with question retrieval, submission, and result display, including in-memory storage fallback.
+- **DISC Assessment System**: Comprehensive personality assessment based on DISC framework (Dominance, Influence, Steadiness, Conscientiousness). Features 15 trait-mapped questions with 5-point Likert scale, intelligent scoring algorithm, and 10 personality profiles (4 pure types + 6 combination types) with tailored job recommendations.
 - **Job Posting**: Recruiters can create and import job postings with comprehensive details and skill management.
 - **Company Management**: Recruiters can view and create company profiles, with AI-powered lookup for company details.
 - **API Versioning**: All API routes use `/api/v1` prefix for versioning, maintaining backward compatibility.
@@ -72,4 +72,16 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - **ORM/Driver**: Native MongoDB driver.
 - **Hosting**: Digital Ocean App Platform.
 - **File Storage**: Supabase storage for profile photo and video uploads.
-- **Bot Protection**: Google reCAPTCHA v2.
+- **Bot Protection**: Simple AI acknowledgement checkbox (replaced reCAPTCHA).
+
+## Recent Updates (October 2025)
+
+### DISC Assessment Module Implementation
+- **Replaced** generic 20-question assessment with scientifically-backed 15-question DISC personality framework
+- **New Question Format**: "Definitely not" (1) → "Definitely me" (5) Likert scale
+- **Personality Profiles**: 10 comprehensive profiles with job recommendations:
+  - Pure Types: D (Trailblazing Leader), I (Charismatic Communicator), S (Reliable Supporter), C (Analytical Strategist)
+  - Combination Types: DI (Dynamic Innovator), DS (Grounded Pioneer), DC (Tactical Executive), IS (Engaging Motivator), IC (Creative Persuader), SC (Dependable Facilitator)
+- **Scoring Algorithm**: Trait-based scoring with normalized 0-100 scores, intelligent personality type detection
+- **Database Seeds**: Scripts for populating questions (`scripts/seeds/assessmentQuestions.js`) and profiles (`scripts/seeds/personalityProfiles.js`)
+- **Bug Fixes**: Resolved ID type mismatch, fixed MongoDB projections, added comprehensive error handling
