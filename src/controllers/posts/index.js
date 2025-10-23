@@ -1,6 +1,6 @@
 import express from 'express';
 const router = express.Router();
-import { container } from '../../di/container.js';
+import container from '../../container.js';
 import jwtAuth from '../../middleware/jwtAuth.js';
 import validateRequest from '../../middleware/validateRequest.js';
 import createPost from './createPost.js';

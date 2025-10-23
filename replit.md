@@ -41,7 +41,7 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - Shadows: Soft, minimal for professional look
 
 ### Technical Implementations
-- **Tech Stack**: Node.js 20.x with Express 5.x.
+- **Tech Stack**: Node.js 20.x with Express 5.x, MongoDB native driver (Prisma fully removed).
 - **Authentication**: JWT-based authentication for secure token-based sessions, supporting email/password and role-based access control (CANDIDATE, RECRUITER). Includes secure password reset functionality.
 - **Static File Serving**: Express serves static HTML, CSS, and JS files for the frontend.
 - **API Utilities**: Shared JavaScript utilities for API calls, authentication, error handling, and formatting on the client-side.
@@ -69,7 +69,7 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 ## External Dependencies
 
 - **Database**: MongoDB (Digital Ocean managed database).
-- **ORM/Driver**: Native MongoDB driver.
+- **Database Driver**: Native MongoDB driver (v6.18.0) - Prisma completely removed.
 - **Hosting**: Digital Ocean App Platform.
 - **File Storage**: Supabase storage for profile photo and video uploads.
 - **Bot Protection**: Simple AI acknowledgement checkbox (replaced reCAPTCHA).
@@ -120,3 +120,19 @@ The API follows a layered architecture: `Routes → Controllers → Services →
   - `getOnboardingMedia.js`: Separated complex Prisma nested queries into simple MongoDB queries (user query + transcriptions query)
 - **Impact**: Candidates can now fully manage their profiles with photo/video uploads, respond to job offers, and use all dashboard features
 - **Status**: All candidate dashboard features operational and architect-approved
+
+### Prisma Complete Removal (October 23, 2025)
+- **Complete Migration to MongoDB Native Driver**: Removed all Prisma ORM dependencies and code from the codebase
+- **Deleted Components**:
+  - `@prisma/client` package uninstalled from dependencies
+  - `prisma/` directory with schema files removed
+  - `src/di/container.js` (old Prisma-based DI container) removed
+  - `src/repositories/` directory (Prisma-based repository pattern) removed
+  - `src/services/database.js` (Prisma client connection) removed
+  - Build scripts (`prisma generate`) removed from package.json
+- **Updated Components**:
+  - `src/index.js`: Now uses only the MongoDB container
+  - `src/controllers/posts/index.js`: Updated to import from MongoDB container
+  - All controller model references use `models/transcription` (singular, matching container registry)
+- **Impact**: Cleaner codebase, no ORM overhead, direct MongoDB operations throughout
+- **Status**: Server running successfully with MongoDB native driver only
