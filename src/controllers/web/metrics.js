@@ -2,8 +2,10 @@ import dayjs from 'dayjs';
 import advancedFormat from 'dayjs/plugin/advancedFormat.js';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js';
 import isToday from 'dayjs/plugin/isToday.js';
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import { getFormattedDate } from '../../services/helper.js';
+import { toObjectId } from '../../utils/mongoHelpers.js';
 dayjs.extend(isToday);
 dayjs.extend(advancedFormat);
 dayjs.extend(isSameOrBefore);
@@ -34,6 +36,8 @@ const addMissingDates = (startDate, endDate, databaseDates) => {
 export default async function getMetrics(req, res, next) {
   const logger = container.make('logger');
   const post = container.make('models/post');
+  const match = container.make('models/match');
+  
   try {
     if (req.query.startDate && req.query.endDate && req.query.overview) {
       return res.status(400).send({
@@ -48,128 +52,150 @@ export default async function getMetrics(req, res, next) {
         message: 'Must provide startDate and endDate together.',
       });
     }
+    
     const overviewEnum = {
       TODAY: [1, 'day'],
       WEEK: [1, 'week'],
       MONTH: [1, 'month'],
+      RANGE: [1, 'month'],
     };
     const overviewMetric = req.query.overview
       ? req.query.overview.toUpperCase()
-      : 'RANGE';
+      : 'MONTH';
     const dateRanges =
       req.query.startDate && req.query.endDate
         ? {
-            gte: dayjs(req.query.startDate).toISOString(),
-            lte: dayjs(req.query.endDate).toISOString(),
+            $gte: new Date(dayjs(req.query.startDate).toISOString()),
+            $lte: new Date(dayjs(req.query.endDate).toISOString()),
           }
         : {
-            gte: dayjs()
+            $gte: new Date(dayjs()
               .subtract(...overviewEnum[overviewMetric])
-              .toISOString(),
-            lte: dayjs().toISOString(),
+              .toISOString()),
+            $lte: new Date(dayjs().toISOString()),
           };
-    // Matches
+    
+    const userId = toObjectId(req.token.sub);
+    if (!userId) {
+      return res.status(400).send({
+        message: 'Invalid user ID',
+        generatedAt: getFormattedDate(),
+      });
+    }
+    
+    // Get posts and total count in parallel
     const results = await Promise.all([
       post.findMany(
         {
-          user: {
-            is: {
-              id: req.token.sub,
-            },
-          },
+          userId: userId,
           createdTime: dateRanges,
         },
         {
-          createdTime: true,
-          views: true,
-          activeHiring: true,
-          _count: {
-            select: {
-              matches: true,
-            },
-          },
-          user: {
-            select: {
-              recruiterMatches: {
-                where: {
-                  recruiterId: req.token.sub,
-                },
-                skip: 0,
-                take: -1,
-                select: {
-                  id: true,
-                  accepted: true,
-                },
-              },
-            },
-          },
+          _id: 1,
+          createdTime: 1,
+          views: 1,
+          activeHiring: 1,
         },
         -1,
         0,
       ),
-      post.count('id'),
+      post.count({ userId: userId }),
+      match.findMany(
+        {
+          recruiterId: userId,
+        },
+        {
+          _id: 1,
+          postId: 1,
+          accepted: 1,
+        }
+      ),
     ]);
+    
     let recruiterPosts = results[0];
+    const allRecruiterMatches = results[2];
+    
+    // Count matches per post
+    const matchCountByPost = new Map();
+    allRecruiterMatches.forEach(m => {
+      const postIdStr = m.postId ? m.postId.toString() : null;
+      if (postIdStr) {
+        matchCountByPost.set(postIdStr, (matchCountByPost.get(postIdStr) || 0) + 1);
+      }
+    });
+    
+    // Filter by TODAY if needed
     if (overviewMetric === 'TODAY') {
       recruiterPosts = recruiterPosts.filter((post) => {
         return dayjs(post.createdTime).isToday();
       });
     }
+    
+    // Add date formatting based on metric
     if (overviewMetric === 'WEEK') {
       recruiterPosts = recruiterPosts.map((post) => {
         return {
           ...post,
           dateFormat: dayjs(post.createdTime).format('dddd'),
+          matchCount: matchCountByPost.get(post._id.toString()) || 0,
         };
       });
-    }
-    if (overviewMetric === 'MONTH') {
+    } else if (overviewMetric === 'MONTH' || overviewMetric === 'RANGE') {
       recruiterPosts = recruiterPosts.map((post) => {
         return {
           ...post,
           dateFormat: dayjs(post.createdTime).format('dddd, MMMM Do'),
+          matchCount: matchCountByPost.get(post._id.toString()) || 0,
         };
       });
-    }
-    if (overviewMetric === 'RANGE') {
+    } else {
       recruiterPosts = recruiterPosts.map((post) => {
         return {
           ...post,
           dateFormat: dayjs(post.createdTime).format('dddd, MMMM Do'),
+          matchCount: matchCountByPost.get(post._id.toString()) || 0,
         };
       });
     }
+    
+    // Calculate metrics
     let totalViews = 0;
     let totalMatches = 0;
     let totalNeedsReview = 0;
     let totalCandidateMatches = 0;
     const seenIds = new Set();
     const dateBreakdown = {};
+    
     recruiterPosts.forEach((post) => {
-      totalViews += post.views;
-      totalMatches += post._count.matches;
+      totalViews += post.views || 0;
+      totalMatches += post.matchCount || 0;
+      
       // Break metrics down by the date
       if (dateBreakdown[post.dateFormat]) {
-        dateBreakdown[post.dateFormat].totalViews += post.views;
-        dateBreakdown[post.dateFormat].totalMatches += post._count.matches;
+        dateBreakdown[post.dateFormat].totalViews += post.views || 0;
+        dateBreakdown[post.dateFormat].totalMatches += post.matchCount || 0;
       } else {
         dateBreakdown[post.dateFormat] = {
-          totalViews: post.views,
-          totalMatches: post._count.matches,
+          totalViews: post.views || 0,
+          totalMatches: post.matchCount || 0,
         };
       }
-      // Not performant at all, but I'm at work coding when i shouldn't be so this is the result
-      post.user.recruiterMatches.forEach((match) => {
-        if (!seenIds.has(match.id)) {
-          totalCandidateMatches += match.accepted ? 1 : 0;
-          totalNeedsReview += !match.accepted ? 1 : 0;
-          seenIds.add(match.id);
-        }
-      });
     });
+    
+    // Count accepted and pending matches
+    allRecruiterMatches.forEach((match) => {
+      const matchIdStr = match._id.toString();
+      if (!seenIds.has(matchIdStr)) {
+        totalCandidateMatches += match.accepted ? 1 : 0;
+        totalNeedsReview += !match.accepted ? 1 : 0;
+        seenIds.add(matchIdStr);
+      }
+    });
+    
     const totalActiveJobs = recruiterPosts.filter(
       (post) => post.activeHiring === true,
     ).length;
+    
     res.send({
       data: {
         [overviewMetric.toLowerCase()]: {
@@ -178,11 +204,11 @@ export default async function getMetrics(req, res, next) {
         },
         dates:
           Object.keys(dateBreakdown).length === 0
-            ? getDateRangesIfNoDataFound(dateRanges.gte, dateRanges.lte)
-            : addMissingDates(dateRanges.gte, dateRanges.lte, dateBreakdown),
+            ? getDateRangesIfNoDataFound(dateRanges.$gte, dateRanges.$lte)
+            : addMissingDates(dateRanges.$gte, dateRanges.$lte, dateBreakdown),
         totalNeedsReview,
         totalCandidateMatches,
-        totalJobs: results[1]._count ? results[1]._count.id : 0,
+        totalJobs: results[1],
         totalActiveJobs,
       },
       details: {
