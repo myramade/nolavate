@@ -1,9 +1,11 @@
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import {
   createMessage,
   createNotification,
   getFormattedDate,
 } from '../../services/helper.js';
+import { toObjectId } from '../../utils/mongoHelpers.js';
 
 const sendResponse = (
   req,
@@ -35,57 +37,42 @@ export default async function updateLikeCount(req, res, next) {
   const user = container.make('models/user');
   const postLikes = container.make('models/postlikes');
   const match = container.make('models/match');
+  
   try {
     let isAMatch = false;
+    const userId = toObjectId(req.token.sub);
+    const postId = toObjectId(req.body.postId);
+    
     // Check if user profile is complete, a user without a complete profile cannot like post
     const queries = await Promise.all([
-      user.findById(req.token.sub, {
-        roleSubtype: true,
-        assessment: {
-          select: {
-            id: true,
-          },
-        },
-        matchMedia: {
-          select: {
-            id: true,
-            category: true,
-          },
-        },
+      user.findById(userId, {
+        _id: 1,
+        roleSubtype: 1,
+        assessmentId: 1,
+        matchMedia: 1,
       }),
       post.findOne(
         {
-          id: req.body.postId,
+          _id: postId,
           postType: 'JOB',
         },
         {
-          id: true,
-          user: {
-            select: {
-              id: true,
-            },
-          },
-          likes: true,
+          _id: 1,
+          userId: 1,
+          likes: 1,
         },
       ),
       postLikes.findFirst(
         {
-          user: {
-            id: {
-              equals: req.token.sub,
-            },
-          },
-          post: {
-            id: {
-              equals: req.body.postId,
-            },
-          },
+          userId: userId,
+          postId: postId,
         },
         {
-          id: true,
+          _id: 1,
         },
       ),
     ]);
+    
     const existingUserProfile = queries[0];
     const existingPost = queries[1];
     const existingLike = queries[2];
@@ -95,7 +82,7 @@ export default async function updateLikeCount(req, res, next) {
         message: 'User account not found.',
       });
     }
-    if (!existingUserProfile.assessment) {
+    if (!existingUserProfile.assessmentId) {
       return res.status(403).send({
         message: 'You must complete your assessment before liking jobs.',
       });
@@ -116,203 +103,154 @@ export default async function updateLikeCount(req, res, next) {
       });
     }
 
-    // Still need to keep track if it exists or not
+    // Check if match already exists
     const existingMatch = await match.findFirst(
       {
-        AND: {
-          candidate: {
-            is: {
-              id: req.token.sub,
-            },
-          },
-          recruiter: {
-            is: {
-              id: existingPost.user.id,
-            },
-          },
-          post: {
-            is: {
-              id: req.body.postId,
-            },
-          },
-        },
+        candidateId: userId,
+        recruiterId: existingPost.userId,
+        postId: postId,
       },
       {
-        id: true,
-        accepted: true,
-        post: {
-          select: {
-            id: true,
-            likes: true,
-          },
-        },
-        recruiter: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        candidate: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        _id: 1,
+        accepted: 1,
+        postId: 1,
+        recruiterId: 1,
+        candidateId: 1,
       },
     );
 
-    // candidate and recruiter have already matched
+    // Load recruiter and candidate names if we have a match (for notifications)
+    let recruiterData = null;
+    let candidateData = null;
+    if (existingMatch) {
+      [recruiterData, candidateData] = await Promise.all([
+        user.findById(existingMatch.recruiterId, { _id: 1, name: 1 }),
+        user.findById(existingMatch.candidateId, { _id: 1, name: 1 }),
+      ]);
+    }
+    
+    // Also load post likes count
+    let postLikesCount = existingPost.likes;
+
+    // candidate and recruiter have already matched - toggle back to unmatched
     if (existingLike && existingMatch && existingMatch.accepted) {
-      isAMatch = true;
-      return sendResponse(
-        req,
-        res,
-        isAMatch,
-        false,
-        true,
-        existingMatch.post.like,
-      );
+      // Unlike flow for accepted match: delete like, update match to not accepted, decrement counts
+      await Promise.all([
+        postLikes.delete({
+          userId_postId: {
+            userId: userId.toString(),
+            postId: postId.toString(),
+          },
+        }),
+        match.updateById(existingMatch._id, { accepted: false }),
+        post.decrement({ _id: postId }, 'likes', 1),
+        post.decrement({ _id: postId }, 'matchCount', 1),
+      ]);
+      postLikesCount = postLikesCount - 1;
+      return sendResponse(req, res, false, true, false, postLikesCount);
     }
 
     // candidate and recruiter have never matched and candidate has never liked job (post)
     if (!existingMatch && !existingLike) {
       // Like flow, with create
       await Promise.all([
-        match.create(
-          {
-            recruiter: {
-              connect: {
-                id: existingPost.user.id,
-              },
-            },
-            candidate: {
-              connect: {
-                id: req.token.sub,
-              },
-            },
-            post: {
-              connect: {
-                id: existingPost.id,
-              },
-            },
-            accepted: false,
-          },
-          { id: true },
-        ),
-        postLikes.create({
-          user: {
-            connect: {
-              id: req.token.sub,
-            },
-          },
-          post: {
-            connect: {
-              id: existingPost.id,
-            },
-          },
+        match.create({
+          recruiterId: existingPost.userId,
+          candidateId: userId,
+          postId: postId,
+          accepted: false,
+          createdTime: new Date(),
         }),
-        post.increment({ id: existingPost.id }, 'likes', 1),
+        postLikes.create({
+          userId: userId,
+          postId: postId,
+          createdTime: new Date(),
+        }),
+        post.increment({ _id: postId }, 'likes', 1),
       ]);
-      existingPost.likes = existingPost.likes + 1;
-      return sendResponse(req, res, isAMatch, false, false, existingPost.likes);
+      postLikesCount = postLikesCount + 1;
+      return sendResponse(req, res, isAMatch, false, false, postLikesCount);
     }
 
     // Edge case that should never happen
     // but we have to solution for it
     if (!existingMatch && existingLike) {
-      await Promise.all([
-        match.create(
-          {
-            recruiter: {
-              connect: {
-                id: existingPost.user.id,
-              },
-            },
-            candidate: {
-              connect: {
-                id: req.token.sub,
-              },
-            },
-            post: {
-              connect: {
-                id: existingPost.id,
-              },
-            },
-            accepted: false,
-          },
-          { id: true },
-        ),
-      ]);
-      return sendResponse(req, res, isAMatch, false, false, existingPost.likes);
+      await match.create({
+        recruiterId: existingPost.userId,
+        candidateId: userId,
+        postId: postId,
+        accepted: false,
+        createdTime: new Date(),
+      });
+      return sendResponse(req, res, isAMatch, false, false, postLikesCount);
     }
 
     // candidate has liked the job (post) previously, but no longer
-    // likes the job (post) and the recruiter has not liked the candidate (match)
+    // likes the job (post) and the recruiter has not liked the candidate (match not accepted)
     if (!existingMatch.accepted && existingLike) {
-      // Unlike flow, with update
+      // Unlike flow, with delete (only decrement likes, not matchCount since match wasn't accepted)
       await Promise.all([
         postLikes.delete({
           userId_postId: {
-            userId: req.token.sub,
-            postId: existingMatch.post.id,
+            userId: userId.toString(),
+            postId: postId.toString(),
           },
         }),
-        match.deleteById(existingMatch.id),
-        post.decrement({ id: existingMatch.post.id }, 'likes', 1),
-        post.decrement({ id: existingMatch.post.id }, 'matchCount', 1),
+        match.deleteById(existingMatch._id),
+        post.decrement({ _id: postId }, 'likes', 1),
+        // Note: matchCount is NOT decremented because this match was never accepted
       ]);
-      existingPost.likes = existingPost.likes - 1;
-      return sendResponse(req, res, isAMatch, true, false, existingPost.likes);
+      postLikesCount = postLikesCount - 1;
+      return sendResponse(req, res, isAMatch, true, false, postLikesCount);
     }
 
     // candidate like job (post) after recruiter has liked the candidate
     if (!existingMatch.accepted && !existingLike) {
       await Promise.all([
         match.updateById(
-          existingMatch.id,
+          existingMatch._id,
           {
             accepted: true,
-            post: {
-              connect: {
-                id: existingPost.id,
-              },
-            },
-          },
-          {
-            id: true,
+            postId: postId,
           },
         ),
-        post.increment({ id: existingPost.id }, 'likes', 1),
-        post.increment({ id: existingPost.id }, 'matchCount', 1),
+        postLikes.create({
+          userId: userId,
+          postId: postId,
+          createdTime: new Date(),
+        }),
+        post.increment({ _id: postId }, 'likes', 1),
+        post.increment({ _id: postId }, 'matchCount', 1),
       ]);
       isAMatch = true;
-      existingPost.likes = existingPost.likes + 1;
+      postLikesCount = postLikesCount + 1;
     }
-    // // send response
-    sendResponse(req, res, isAMatch, false, false, existingPost.likes);
+    
+    // send response
+    sendResponse(req, res, isAMatch, false, false, postLikesCount);
 
     // Create message and push notification
-    if (isAMatch) {
+    if (isAMatch && recruiterData && candidateData) {
       await Promise.all([
         createNotification(
           container,
           req.token.sub,
-          existingMatch.candidate.id,
+          candidateData._id.toString(),
           'MATCH',
           `You recieved a match from ${req.token.name}!`,
         ),
         createNotification(
           container,
-          existingMatch.candidate.id,
+          candidateData._id.toString(),
           req.token.sub,
           'MATCH',
-          `You and ${existingMatch.candidate.name} have matched!`,
+          `You and ${candidateData.name} have matched!`,
         ),
         createMessage(
           container,
           req,
-          [existingMatch.recruiter.id],
-          `Hi ${existingMatch.recruiter.name}, we've matched!`,
+          [recruiterData._id.toString()],
+          `Hi ${recruiterData.name}, we've matched!`,
         ),
       ]);
     }

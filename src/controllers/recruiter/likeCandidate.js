@@ -1,9 +1,11 @@
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import {
   createMessage,
   createNotification,
   getFormattedDate,
 } from '../../services/helper.js';
+import { toObjectId } from '../../utils/mongoHelpers.js';
 
 const sendResponse = (req, res, isAMatch) => {
   res.send({
@@ -20,153 +22,135 @@ export default async function likeCandidate(req, res, next) {
   const logger = container.make('logger');
   const post = container.make('models/post');
   const match = container.make('models/match');
+  const user = container.make('models/user');
+  
   try {
     let isAMatch = false;
+    const recruiterId = toObjectId(req.token.sub);
+    const candidateId = toObjectId(req.body.candidateId);
+    
     // Check if recruiter has posts, recruiter must have posts to like a candidate
     const recruiterExistingJobPost = await post.findFirst(
       {
-        user: {
-          is: {
-            id: req.token.sub,
-          },
-        },
+        userId: recruiterId,
         postType: 'JOB',
       },
       {
-        id: true,
+        _id: 1,
       },
     );
+    
     if (!recruiterExistingJobPost) {
       return res.status(403).send({
         message: 'You must create a job to like a candidate.',
       });
     }
-    // Find existing match
+    
+    // Find existing match (any state - accepted or not)
     const existingMatch = await match.findFirst(
       {
-        AND: {
-          candidate: {
-            is: {
-              id: req.body.candidateId,
-            },
-          },
-          recruiter: {
-            is: {
-              id: req.token.sub,
-            },
-          },
-          accepted: false,
-        },
+        candidateId: candidateId,
+        recruiterId: recruiterId,
       },
       {
-        id: true,
-        accepted: true,
-        post: {
-          select: {
-            id: true,
-          },
-        },
-        recruiter: {
-          select: {
-            id: true,
-          },
-        },
-        candidate: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        _id: 1,
+        accepted: 1,
+        postId: 1,
+        recruiterId: 1,
+        candidateId: 1,
       },
     );
+    
     // Create Prospect, if existing match does not exist
     if (!existingMatch) {
-      await match.create(
-        {
-          recruiter: {
-            connect: {
-              id: req.token.sub,
-            },
-          },
-          candidate: {
-            connect: {
-              id: req.body.candidateId,
-            },
-          },
-          accepted: false,
-        },
-        { id: true },
-      );
+      await match.create({
+        recruiterId: recruiterId,
+        candidateId: candidateId,
+        accepted: false,
+        createdTime: new Date(),
+      });
       return sendResponse(req, res, isAMatch);
     }
-    // If recruiter liked candidate and candidate liked recruiter, but now recruiter dislikes candidate, change accepted to false
+    
+    // If recruiter liked candidate and candidate liked recruiter (mutual match), but now recruiter dislikes, change accepted to false
     if (existingMatch.accepted) {
       await match.updateById(
-        existingMatch.id,
+        existingMatch._id,
         {
           accepted: false,
         },
-        {
-          id: true,
-        },
       );
-      await post.decrement({ id: existingMatch.post.id }, 'matchCount', 1);
+      if (existingMatch.postId) {
+        await post.decrement({ _id: existingMatch.postId }, 'matchCount', 1);
+      }
       return sendResponse(req, res, isAMatch);
     }
-    // If only the recruiter liked candidate, and now unlikes candidate
-    if (!existingMatch.accepted && !existingMatch.candidate.id) {
-      await match.deleteById(existingMatch.id);
-      await post.decrement({ id: existingMatch.post.id }, 'matchCount', 1);
+    
+    // If match exists but not accepted, check who initiated:
+    // - If match has postId: candidate initiated (candidate liked job first)
+    // - If match has NO postId: recruiter initiated (recruiter liked candidate first)
+    
+    // Recruiter already liked this candidate before (recruiter-initiated match) - now unlikes
+    if (!existingMatch.accepted && !existingMatch.postId) {
+      await match.deleteById(existingMatch._id);
       return sendResponse(req, res, isAMatch);
     }
-    // Recruiter and candidated have liked each other, but match not created yet
-    if (!existingMatch.accepted && existingMatch.candidate.id) {
+    
+    // Candidate liked job first (candidate-initiated match), recruiter now likes back → MATCH!
+    if (!existingMatch.accepted && existingMatch.postId) {
+      // Load candidate name for notifications (with null guard)
+      const candidateData = await user.findById(candidateId, { _id: 1, name: 1 });
+      const candidateName = candidateData?.name || 'Candidate';
+      const recruiterName = req.token?.name || 'Recruiter';
+      
       await match.updateById(
-        existingMatch.id,
+        existingMatch._id,
         {
           accepted: true,
-          recruiter: {
-            connect: {
-              id: req.token.sub,
-            },
-          },
-        },
-        {
-          id: true,
+          recruiterId: recruiterId,
         },
       );
-      await Promise.all([
+      
+      const notificationPromises = [
         createNotification(
           container,
           req.token.sub,
-          existingMatch.candidate.id,
+          candidateId.toString(),
           'MATCH',
-          `You recieved a match from ${req.token.name}!`,
+          `You recieved a match from ${recruiterName}!`,
         ),
         createNotification(
           container,
-          existingMatch.candidate.id,
+          candidateId.toString(),
           req.token.sub,
           'MATCH',
-          `You recieved a match from ${existingMatch.candidate.name}!`,
+          `You recieved a match from ${candidateName}!`,
         ),
         createMessage(
           container,
           req,
-          [existingMatch.candidate.id],
-          `Hi ${existingMatch.candidate.name}, we've matched!`,
+          [candidateId.toString()],
+          `Hi ${candidateName}, we've matched!`,
         ),
-        post.increment({ id: existingMatch.post.id }, 'matchCount', 1),
-      ]);
+      ];
+      
+      if (existingMatch.postId) {
+        notificationPromises.push(
+          post.increment({ _id: existingMatch.postId }, 'matchCount', 1)
+        );
+      }
+      
+      await Promise.all(notificationPromises);
       isAMatch = true;
     }
+    
     sendResponse(req, res, isAMatch);
   } catch (err) {
     logger.error(
       `Error occurred liking candidate, recruiter ID: ${req.token.sub}. Reason:`,
     );
     logger.error(err.stack);
-    if (err.message.startsWith('Unique constraint failed')) {
+    if (err.message && err.message.startsWith('Unique constraint failed')) {
       return res
         .status(208)
         .send({ message: 'Match already created between users.' });
