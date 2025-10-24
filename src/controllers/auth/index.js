@@ -22,6 +22,7 @@ import { generateAccessToken, generateRefreshToken, generatePasswordResetToken }
 import refreshToken from './refresh.js';
 import logout from './logout.js';
 import jwtAuth from '../../middleware/jwtAuth.js';
+import { ApiResponse } from '../../utils/response.js';
 
 const router = express.Router();
 
@@ -45,7 +46,7 @@ router.post('/register', authRateLimiter, validateSchema(registerSchema), async 
     // Check if user already exists
     const existingUser = await container.make('models/user').findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return ApiResponse.error(res, 'User already exists', 400);
     }
 
     // Hash password
@@ -83,22 +84,20 @@ router.post('/register', authRateLimiter, validateSchema(registerSchema), async 
     };
     await sessionModel.createSession(user._id, refreshToken, deviceInfo);
 
-    res.status(201).json({
-      data: {
-        accessToken,
-        refreshToken,
-        user: {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          roleSubtype: user.roleSubtype
-        }
+    return ApiResponse.success(res, {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        roleSubtype: user.roleSubtype
       }
-    });
+    }, 'Registration successful', 201);
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error(`[${req.requestId}] Registration error:`, error);
+    return ApiResponse.error(res, 'Internal server error', 500);
   }
 });
 
@@ -110,13 +109,13 @@ router.post('/login', authRateLimiter, validateSchema(loginSchema), async (req, 
     // Find user
     const user = await container.make('models/user').findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return ApiResponse.error(res, 'Invalid credentials', 401);
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return ApiResponse.error(res, 'Invalid credentials', 401);
     }
 
     // Generate tokens
@@ -138,22 +137,20 @@ router.post('/login', authRateLimiter, validateSchema(loginSchema), async (req, 
     };
     await sessionModel.createSession(user._id, refreshTokenValue, deviceInfo);
 
-    res.json({
-      data: {
-        accessToken,
-        refreshToken: refreshTokenValue,
-        user: {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          roleSubtype: user.roleSubtype
-        }
+    return ApiResponse.success(res, {
+      accessToken,
+      refreshToken: refreshTokenValue,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        roleSubtype: user.roleSubtype
       }
-    });
+    }, 'Login successful');
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error(`[${req.requestId}] Login error:`, error);
+    return ApiResponse.error(res, 'Internal server error', 500);
   }
 });
 

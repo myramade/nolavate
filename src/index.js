@@ -42,9 +42,23 @@ app.use(helmet({
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = config.isDevelopment 
-      ? ['http://localhost:5000', 'http://127.0.0.1:5000']
-      : process.env.ALLOWED_ORIGINS?.split(',') || [];
+    let allowedOrigins = [];
+    
+    if (config.isDevelopment) {
+      // In development, allow localhost and Replit domains
+      allowedOrigins = [
+        'http://localhost:5000',
+        'http://127.0.0.1:5000'
+      ];
+      
+      // Add Replit domain if available
+      if (process.env.REPLIT_DEV_DOMAIN) {
+        allowedOrigins.push(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+      }
+    } else {
+      // In production, use explicit allowed origins
+      allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+    }
     
     // Allow requests with no origin (mobile apps, curl, etc)
     if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
