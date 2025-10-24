@@ -68,7 +68,7 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 
 ## Migration Status
 
-### MongoDB Migration Progress: 17/30 Controllers (57%)
+### MongoDB Migration Progress: 21/30 Controllers (70%)
 
 **Phase 1 - Authentication (4 controllers):** ✅ Complete
 - signup.js, signin.js, forgotPassword.js, resetPassword.js
@@ -89,15 +89,25 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - **Match detection:** postId presence indicates candidate-initiated match
 - All flows architect-approved as production-ready
 
+**Phase 5 - Match Retrieval (2 controllers):** ✅ Complete (Oct 24, 2025)
+- getMatchById.js: Single match details with 3-level batch loading (candidate, recruiter, post → media, personality, company)
+- getMatchesByPostId.js: All matches for a job post with INFO media filtering and 4-level nested batch loading
+- **ObjectId preservation:** Keep BSON instances throughout batch loading (no string conversion overhead)
+- **Filtering logic:** Candidates must have at least one INFO category media (intro video requirement)
+- **Performance:** Multi-level parallel batching with Map-based O(1) lookups prevents N+1 queries
+- Architect-approved as production-ready
+
 **Remaining Phases:**
-- Comments, messages, notifications, and other features (~13 controllers)
+- Comments, messages, notifications, and other features (~9 controllers)
 
 ### Key Migration Patterns
 - Replace Prisma connect/is/select with direct ObjectId fields
 - Batch-load relations using Maps/Sets and Promise.all()
+- Preserve ObjectId instances in collections (avoid toString/reconstruction)
 - Serialize all responses with serializeDocument()
 - Use container.make() with exact model registry names (singular except 'postlikes')
 - Performance: Prevent N+1 queries via bulk $in queries with Map lookups
+- Multi-level batching: Load dependent data in sequential Promise.all rounds
 
 ## External Dependencies
 
