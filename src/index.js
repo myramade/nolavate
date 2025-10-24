@@ -19,6 +19,10 @@ const PORT = config.port;
 await connectToMongoDB();
 await container.initialize();
 
+// Ensure database indexes
+import { ensureIndexes } from './database/indexes.js';
+await ensureIndexes();
+
 // Trust proxy - needed for rate limiting behind reverse proxies (Replit, DigitalOcean, etc.)
 app.set('trust proxy', 1);
 
@@ -77,6 +81,10 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// NoSQL Injection protection
+import { preventNoSQLInjection } from './utils/sanitization.js';
+app.use(preventNoSQLInjection());
+
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
@@ -130,35 +138,13 @@ app.use('/api/v1/recruiter', recruiterRoutes);
 app.use('/api/v1/web', webRoutes);
 
 // Global error handling middleware
-app.use((err, req, res, next) => {
-  logger.error(`[${req.requestId}] Error:`, err.stack);
-
-  // Handle specific error types
-  if (err.name === 'ValidationError') {
-    return ApiResponse.validationError(res, [{ message: err.message }]);
-  }
-
-  if (err.name === 'UnauthorizedError') {
-    return ApiResponse.unauthorized(res, err.message);
-  }
-
-  if (err.message === 'Not allowed by CORS') {
-    return ApiResponse.forbidden(res, 'CORS policy violation');
-  }
-
-  // Default error response
-  const statusCode = err.statusCode || 500;
-  return ApiResponse.error(
-    res, 
-    statusCode === 500 ? 'Internal Server Error' : err.message,
-    statusCode
-  );
-});
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 // 404 handler - Express 5 compatible wildcard route
-app.use('/*splat', (req, res) => {
-  return ApiResponse.notFound(res, `Route not found: ${req.originalUrl}`);
-});
+app.use('/*splat', notFoundHandler);
+
+// Error handler must be last
+app.use(errorHandler);
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);

@@ -221,6 +221,49 @@ All API responses now follow a consistent structure using the `ApiResponse` util
 - All API routes now use `/api/v1/*` prefix
 - Cleaner route structure and easier maintenance
 
+## Security & Reliability Enhancements (October 24, 2025)
+
+### Environment Configuration Validation
+- Comprehensive validation of all environment variables on startup
+- JWT_SECRET: minimum 32 characters, prevents default values
+- PORT: validates range (1-65535)
+- NODE_ENV: validates against standard values (development, production, test, staging)
+- Production-specific validations (DATABASE_URL required, ALLOWED_ORIGINS warnings)
+- OAuth configuration warnings (Google, Apple)
+- Clear error/warning messages with actionable guidance
+
+### Database Index Management
+- Automated index creation on server startup
+- Users: email (unique), googleId/appleId (sparse), role_roleSubtype compound, createdTime desc
+- Sessions: refreshToken (unique), userId_isActive compound, expiresAt TTL index
+- Posts: postType_createdTime compound, userId_postType, companyId sparse
+- Matches: candidateId_status, recruiterId_status, postId compound indexes
+- PostLikes: candidateId_postId (unique), candidateId_createdAt compound
+- Media: userId_category, userId_createdAt compound indexes
+- Assessments: userId (unique), personalityType
+- Companies: name (unique), industry
+- Graceful handling when database unavailable
+
+### MongoDB Injection Protection
+- Global query sanitization middleware
+- Prevents MongoDB operator injection ($where, $function, etc.)
+- Whitelist of allowed operators ($eq, $in, $set, $and, $or, etc.)
+- Sanitizes user input to remove dangerous field names
+- Validates ObjectId format before query execution
+- Applied to all requests (query params, body, URL params)
+- Existing code uses safe ObjectId conversion throughout
+
+### Error Handling Standardization
+- Centralized error handling middleware
+- AppError class for operational errors
+- Handles MongoDB errors (duplicate keys, connection failures)
+- Handles JWT errors (invalid/expired tokens)
+- Handles validation and CORS errors
+- Environment-aware error messages (detailed in dev, generic in prod)
+- All errors use standardized ApiResponse format
+- Comprehensive error logging with request context
+- asyncHandler() wrapper available for async route handlers
+
 ## External Dependencies
 
 - **Database**: MongoDB (Digital Ocean managed database).
