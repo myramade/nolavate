@@ -3,6 +3,7 @@ const router = express.Router();
 import container from '../../container.js';
 import jwtAuth from '../../middleware/jwtAuth.js';
 import validateRequest from '../../middleware/validateRequest.js';
+import { validateFileUpload } from '../../middleware/fileUploadValidation.js';
 import getOnboardingMedia from './getOnboardingMedia.js';
 import respondToJobOffer from './respondToJobOffer.js';
 import uploadOnboardingMedia from './uploadOnboardingMedia.js';
@@ -15,6 +16,7 @@ const matchMediaUploader = container.make('upload')('images,videos');
 const uploadResumeWrapper = [
   jwtAuth(container.make('roles').user),
   resumeUploader.single('resume'),
+  validateFileUpload('resume'),
 ];
 const uploadMatchMediaWrapper = [
   jwtAuth(
@@ -23,6 +25,7 @@ const uploadMatchMediaWrapper = [
     container.make('roles').candidate,
   ),
   matchMediaUploader.single('media'),
+  validateFileUpload('media'),
   validateRequest,
 ];
 const baseMiddleware = [

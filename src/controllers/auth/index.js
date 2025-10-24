@@ -7,6 +7,8 @@ import container from '../../container.js';
 import validateRequest from '../../middleware/validateRequest.js';
 import { OAuth2Client } from 'google-auth-library';
 import appleSignin from 'apple-signin-auth';
+import { config } from '../../config/env.js';
+import { authRateLimiter, passwordResetRateLimiter } from '../../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -23,12 +25,16 @@ router.get('/config', (req, res) => {
 });
 
 // Register endpoint
-router.post('/register', validateRequest, async (req, res) => {
+router.post('/register', authRateLimiter, validateRequest, async (req, res) => {
   try {
-    const { email, password, name, role, roleSubtype } = req.body;
+    const { email, password, name } = req.body;
     
     if (!email || !password || !name) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
     }
 
     // Check if user already exists
@@ -40,45 +46,37 @@ router.post('/register', validateRequest, async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Create user
+    // Create user with default role (SECURITY: Never trust client-supplied roles)
     const user = await container.make('models/user').create({
       _id: new ObjectId(),
       email,
       password: hashedPassword,
       name,
-      role: role || 'USER',
-      roleSubtype: roleSubtype || 'CANDIDATE',
+      role: 'USER',
+      roleSubtype: 'CANDIDATE',
       createdTime: new Date(),
       isActive: true,
       isVerified: false
     });
 
     // Generate JWT token
-    const jwtSecret = process.env.JWT_SECRET || process.env.SESSION_TOKEN_SECRET;
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
-    }
-    
-    // Convert ObjectId to string for JWT and response
-    const userId = user._id.toString();
-    
     const token = jwt.sign(
       { 
-        sub: userId,
+        sub: user._id.toString(),
         email: user.email,
         name: user.name,
         role: user.role,
         roleSubtype: user.roleSubtype
       },
-      jwtSecret,
-      { expiresIn: '24h' }
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
     );
 
     res.status(201).json({
       data: {
         accessToken: token,
         user: {
-          id: userId,
+          id: user._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,
@@ -88,21 +86,12 @@ router.post('/register', validateRequest, async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
-    
-    // Return more helpful error in development
-    if (process.env.NODE_ENV === 'development') {
-      return res.status(500).json({ 
-        message: 'Internal server error',
-        error: error.message 
-      });
-    }
-    
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 // Login endpoint
-router.post('/login', validateRequest, async (req, res) => {
+router.post('/login', authRateLimiter, validateRequest, async (req, res) => {
   try {
     const { email, password } = req.body;
     
@@ -123,31 +112,23 @@ router.post('/login', validateRequest, async (req, res) => {
     }
 
     // Generate JWT token
-    const jwtSecret = process.env.JWT_SECRET || process.env.SESSION_TOKEN_SECRET;
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
-    }
-    
-    // Convert ObjectId to string for JWT and response
-    const userId = user._id.toString();
-    
     const token = jwt.sign(
       { 
-        sub: userId,
+        sub: user._id.toString(),
         email: user.email,
         name: user.name,
         role: user.role,
         roleSubtype: user.roleSubtype
       },
-      jwtSecret,
-      { expiresIn: '24h' }
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
     );
 
     res.json({
       data: {
         accessToken: token,
         user: {
-          id: userId,
+          id: user._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,
@@ -157,23 +138,14 @@ router.post('/login', validateRequest, async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    
-    // Return more helpful error in development
-    if (process.env.NODE_ENV === 'development') {
-      return res.status(500).json({ 
-        message: 'Internal server error',
-        error: error.message 
-      });
-    }
-    
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 // Google OAuth Login
-router.post('/google', validateRequest, async (req, res) => {
+router.post('/google', authRateLimiter, validateRequest, async (req, res) => {
   try {
-    const { idToken, roleSubtype } = req.body;
+    const { idToken, state, nonce } = req.body;
     
     if (!idToken) {
       return res.status(400).json({ message: 'ID token required' });
@@ -192,6 +164,12 @@ router.post('/google', validateRequest, async (req, res) => {
     });
     
     const payload = ticket.getPayload();
+    
+    // Verify nonce if provided (CSRF protection)
+    if (nonce && payload.nonce !== nonce) {
+      return res.status(401).json({ message: 'Invalid nonce - potential CSRF attack' });
+    }
+    
     const googleUserId = payload['sub'];
     const email = payload['email'];
     const name = payload['name'];
@@ -201,7 +179,7 @@ router.post('/google', validateRequest, async (req, res) => {
     let user = await container.make('models/user').findOne({ email });
     
     if (!user) {
-      // Create new user
+      // Create new user with default role (SECURITY: Never trust client-supplied roles)
       user = await container.make('models/user').create({
         _id: new ObjectId(),
         email,
@@ -209,7 +187,7 @@ router.post('/google', validateRequest, async (req, res) => {
         googleId: googleUserId,
         profilePicture: picture,
         role: 'USER',
-        roleSubtype: roleSubtype || 'CANDIDATE',
+        roleSubtype: 'CANDIDATE',
         createdTime: new Date(),
         isActive: true,
         isVerified: true,
@@ -227,35 +205,28 @@ router.post('/google', validateRequest, async (req, res) => {
           }
         );
         user.googleId = googleUserId;
+        user.profilePicture = picture;
       }
     }
 
     // Generate JWT token
-    const jwtSecret = process.env.JWT_SECRET || process.env.SESSION_TOKEN_SECRET;
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
-    }
-    
-    // Convert ObjectId to string for JWT and response
-    const userId = user._id.toString();
-    
     const token = jwt.sign(
       { 
-        sub: userId,
+        sub: user._id.toString(),
         email: user.email,
         name: user.name,
         role: user.role,
         roleSubtype: user.roleSubtype
       },
-      jwtSecret,
-      { expiresIn: '24h' }
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
     );
 
     res.json({
       data: {
         accessToken: token,
         user: {
-          id: userId,
+          id: user._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,
@@ -271,9 +242,9 @@ router.post('/google', validateRequest, async (req, res) => {
 });
 
 // Apple Sign-In
-router.post('/apple', validateRequest, async (req, res) => {
+router.post('/apple', authRateLimiter, validateRequest, async (req, res) => {
   try {
-    const { idToken, code, roleSubtype } = req.body;
+    const { idToken, code, nonce } = req.body;
     
     if (!idToken && !code) {
       return res.status(400).json({ message: 'ID token or authorization code required' });
@@ -292,29 +263,35 @@ router.post('/apple', validateRequest, async (req, res) => {
       try {
         const appleData = await appleSignin.verifyIdToken(idToken, {
           audience: appleClientId,
-          ignoreExpiration: false
+          ignoreExpiration: false,
+          nonce: nonce
         });
         
         appleUserId = appleData.sub;
         email = appleData.email;
+        name = appleData.name;
       } catch (verifyError) {
         console.error('Apple ID token verification failed:', verifyError);
         return res.status(401).json({ message: 'Invalid Apple ID token' });
       }
     }
 
+    if (!email) {
+      return res.status(400).json({ message: 'Email not provided by Apple Sign-In' });
+    }
+
     // Find or create user
     let user = await container.make('models/user').findOne({ email });
     
     if (!user) {
-      // Create new user
+      // Create new user with default role (SECURITY: Never trust client-supplied roles)
       user = await container.make('models/user').create({
         _id: new ObjectId(),
         email,
         name: name || email.split('@')[0],
         appleId: appleUserId,
         role: 'USER',
-        roleSubtype: roleSubtype || 'CANDIDATE',
+        roleSubtype: 'CANDIDATE',
         createdTime: new Date(),
         isActive: true,
         isVerified: true,
@@ -335,31 +312,23 @@ router.post('/apple', validateRequest, async (req, res) => {
     }
 
     // Generate JWT token
-    const jwtSecret = process.env.JWT_SECRET || process.env.SESSION_TOKEN_SECRET;
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
-    }
-    
-    // Convert ObjectId to string for JWT and response
-    const userId = user._id.toString();
-    
     const token = jwt.sign(
       { 
-        sub: userId,
+        sub: user._id.toString(),
         email: user.email,
         name: user.name,
         role: user.role,
         roleSubtype: user.roleSubtype
       },
-      jwtSecret,
-      { expiresIn: '24h' }
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
     );
 
     res.json({
       data: {
         accessToken: token,
         user: {
-          id: userId,
+          id: user._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,
@@ -374,7 +343,7 @@ router.post('/apple', validateRequest, async (req, res) => {
 });
 
 // Forgot Password - Generate reset token
-router.post('/forgot-password', validateRequest, async (req, res) => {
+router.post('/forgot-password', passwordResetRateLimiter, validateRequest, async (req, res) => {
   try {
     const { email } = req.body;
     
@@ -394,21 +363,13 @@ router.post('/forgot-password', validateRequest, async (req, res) => {
     }
 
     // Generate reset token
-    const jwtSecret = process.env.JWT_SECRET || process.env.SESSION_TOKEN_SECRET;
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
-    }
-    
-    // Convert ObjectId to string for JWT
-    const userId = user._id.toString();
-    
     const resetToken = jwt.sign(
       { 
-        sub: userId,
+        sub: user._id.toString(),
         email: user.email,
         type: 'password_reset'
       },
-      jwtSecret,
+      config.jwt.secret,
       { expiresIn: '1h' }
     );
 
@@ -447,7 +408,7 @@ router.post('/forgot-password', validateRequest, async (req, res) => {
 });
 
 // Reset Password - Verify token and update password
-router.post('/reset-password', validateRequest, async (req, res) => {
+router.post('/reset-password', passwordResetRateLimiter, validateRequest, async (req, res) => {
   try {
     const { token, password } = req.body;
     
@@ -461,14 +422,9 @@ router.post('/reset-password', validateRequest, async (req, res) => {
     }
 
     // Verify token
-    const jwtSecret = process.env.JWT_SECRET || process.env.SESSION_TOKEN_SECRET;
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET or SESSION_TOKEN_SECRET must be configured');
-    }
-
     let decoded;
     try {
-      decoded = jwt.verify(token, jwtSecret);
+      decoded = jwt.verify(token, config.jwt.secret);
     } catch (err) {
       return res.status(401).json({ message: 'Invalid or expired reset token' });
     }
