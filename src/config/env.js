@@ -49,6 +49,20 @@ function validateConfig() {
     }
   }
 
+  // Supabase warnings (required for file uploads)
+  if (!process.env.SUPABASE_URL) {
+    warnings.push('SUPABASE_URL not set. File uploads (images/videos) will fail');
+  }
+
+  if (!process.env.SUPABASE_KEY && !process.env.SUPABASE_SERVICE_KEY) {
+    warnings.push('SUPABASE_KEY not set. File uploads (images/videos) will fail');
+  }
+
+  // Perplexity AI warnings (optional features)
+  if (!process.env.PERPLEXITY_API_KEY) {
+    warnings.push('PERPLEXITY_API_KEY not set. AI company details will use mock data');
+  }
+
   // OAuth warnings (optional features)
   if (!process.env.GOOGLE_CLIENT_ID) {
     warnings.push('GOOGLE_CLIENT_ID not set. Google OAuth will be disabled');
@@ -92,6 +106,13 @@ export const config = {
   oauth: {
     googleClientId: process.env.GOOGLE_CLIENT_ID || null,
     appleClientId: process.env.APPLE_CLIENT_ID || null
+  },
+  supabase: {
+    url: process.env.SUPABASE_URL || null,
+    key: process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_KEY || null
+  },
+  perplexity: {
+    apiKey: process.env.PERPLEXITY_API_KEY || null
   },
   cors: {
     allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || []

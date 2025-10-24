@@ -16,6 +16,8 @@ import CommentModel from './models/comment.js';
 import SessionModel from './models/session.js';
 import ROLES from './config/roles.js';
 import { createUploadMiddleware } from './infrastructure/upload.service.js';
+import createSupabaseService, { supabaseUpload, supabasePublicUrl, supabaseUploadComplete } from './infrastructure/supabase.service.js';
+import { getCompanyDetails, getPersonalityTypesFromJobDescription } from './infrastructure/perplexity.service.js';
 
 class Container {
   constructor() {
@@ -37,6 +39,16 @@ class Container {
       warn: (message) => console.warn(`WARN: ${message}`),
       debug: (message) => console.debug(`DEBUG: ${message}`)
     });
+    
+    // Register Supabase services
+    this.services.set('supabase', createSupabaseService);
+    this.services.set('supabase/upload', supabaseUpload);
+    this.services.set('supabase/publicurl', supabasePublicUrl);
+    this.services.set('supabase/uploadFilesComplete', supabaseUploadComplete);
+    
+    // Register Perplexity AI services
+    this.services.set('perplexity-company-details', getCompanyDetails);
+    this.services.set('perplexity-personality-job', getPersonalityTypesFromJobDescription);
   }
 
   async initialize() {
