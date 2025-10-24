@@ -4,8 +4,8 @@ import { getFormattedDate, skipUndefined } from '../../services/helper.js';
 
 export default async function createJobOffer(req, res, next) {
   const logger = container.make('logger');
-  const jobOffer = container.make('models/joboffers');
-  const notifications = container.make('models/notifications');
+  const jobOffer = container.make('models/joboffer');
+  const notifications = container.make('models/notification');
   const post = container.make('models/post');
 
   try {

@@ -3,7 +3,7 @@ import { getFormattedDate } from '../../services/helper.js';
 
 export default async function createJobOffer(req, res, next) {
   const logger = container.make('logger');
-  const jobOffer = container.make('models/joboffers');
+  const jobOffer = container.make('models/joboffer');
 
   try {
     const result = await jobOffer.softDelete(

@@ -3,7 +3,7 @@ import { getFormattedDate } from '../../services/helper.js';
 
 export default async function getMyJobOffers(req, res, next) {
   const logger = container.make('logger');
-  const jobOffer = container.make('models/joboffers');
+  const jobOffer = container.make('models/joboffer');
   const field =
     req.token.roleSubtype === 'CANDIDATE' ? 'candidate' : 'recruiter';
   // Pagination

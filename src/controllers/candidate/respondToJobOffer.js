@@ -4,8 +4,8 @@ import { ObjectId } from 'mongodb';
 
 export default async function updateJobOffer(req, res, next) {
   const logger = container.make('logger');
-  const jobOffer = container.make('models/joboffers');
-  const notifications = container.make('models/notifications');
+  const jobOffer = container.make('models/joboffer');
+  const notifications = container.make('models/notification');
 
   try {
     const result = await jobOffer[
