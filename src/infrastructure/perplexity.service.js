@@ -6,24 +6,35 @@ if (USE_MOCK_MODE) {
   console.warn('   Set PERPLEXITY_API_KEY environment variable for real AI features.');
 }
 
+function getMockCompanyDetails(companyName) {
+  console.log(`[MOCK] Fetching company details for: ${companyName}`);
+  return {
+    companyName: companyName,
+    website: `https://${companyName.toLowerCase().replace(/\s+/g, '')}.com`,
+    logoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=2C2C2C&color=fff&size=200`,
+    industry: 'Technology',
+    about: `${companyName} is a leading company in its industry, committed to innovation and excellence.`,
+    location: {
+      city: 'San Francisco',
+      state: 'CA'
+    },
+    techStacks: ['JavaScript', 'React', 'Node.js', 'MongoDB'],
+    dateFounded: '2020',
+    numberOfEmployees: '50-200',
+    companyCulture: 'Innovative, collaborative, and growth-oriented'
+  };
+}
+
+function getMockPersonalityTypes() {
+  console.log(`[MOCK] Analyzing job description for personality types`);
+  return {
+    personalities: ['Analytical Thinker', 'Strategic Planner', 'Collaborative Team Player']
+  };
+}
+
 export async function getCompanyDetails(companyName) {
   if (USE_MOCK_MODE) {
-    console.log(`[MOCK] Fetching company details for: ${companyName}`);
-    return {
-      companyName: companyName,
-      website: `https://${companyName.toLowerCase().replace(/\s+/g, '')}.com`,
-      logoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=2C2C2C&color=fff&size=200`,
-      industry: 'Technology',
-      about: `${companyName} is a leading company in its industry, committed to innovation and excellence.`,
-      location: {
-        city: 'San Francisco',
-        state: 'CA'
-      },
-      techStacks: ['JavaScript', 'React', 'Node.js', 'MongoDB'],
-      dateFounded: '2020',
-      numberOfEmployees: '50-200',
-      companyCulture: 'Innovative, collaborative, and growth-oriented'
-    };
+    return getMockCompanyDetails(companyName);
   }
 
   try {
@@ -63,16 +74,13 @@ export async function getCompanyDetails(companyName) {
     throw new Error('Failed to parse company details from Perplexity response');
   } catch (error) {
     console.error('Perplexity AI error, falling back to mock:', error.message);
-    return getCompanyDetails(companyName);
+    return getMockCompanyDetails(companyName);
   }
 }
 
 export async function getPersonalityTypesFromJobDescription(jobDescription) {
   if (USE_MOCK_MODE) {
-    console.log(`[MOCK] Analyzing job description for personality types`);
-    return {
-      personalities: ['Analytical Thinker', 'Strategic Planner', 'Collaborative Team Player']
-    };
+    return getMockPersonalityTypes();
   }
 
   try {
@@ -112,6 +120,6 @@ export async function getPersonalityTypesFromJobDescription(jobDescription) {
     throw new Error('Failed to parse personality types from Perplexity response');
   } catch (error) {
     console.error('Perplexity AI error, falling back to mock:', error.message);
-    return getPersonalityTypesFromJobDescription(jobDescription);
+    return getMockPersonalityTypes();
   }
 }
