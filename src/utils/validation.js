@@ -4,7 +4,10 @@ import { PAGINATION_DEFAULTS, ApiResponse } from './response.js';
 export const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  name: z.string().min(1, 'Name is required').max(100, 'Name too long')
+  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+  roleSubtype: z.enum(['CANDIDATE', 'RECRUITER'], {
+    errorMap: () => ({ message: 'Invalid role. Must be CANDIDATE or RECRUITER' })
+  })
 });
 
 export const loginSchema = z.object({

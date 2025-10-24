@@ -40,7 +40,7 @@ router.get('/config', (req, res) => {
 // Register endpoint
 router.post('/register', authRateLimiter, validateSchema(registerSchema), async (req, res) => {
   try {
-    const { email, password, name } = req.validatedBody;
+    const { email, password, name, roleSubtype } = req.validatedBody;
 
     // Check if user already exists
     const existingUser = await container.make('models/user').findOne({ email });
@@ -51,14 +51,14 @@ router.post('/register', authRateLimiter, validateSchema(registerSchema), async 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Create user with default role (SECURITY: Never trust client-supplied roles)
+    // Create user - roleSubtype is validated, so safe to use
     const user = await container.make('models/user').create({
       _id: new ObjectId(),
       email,
       password: hashedPassword,
       name,
       role: 'USER',
-      roleSubtype: 'CANDIDATE',
+      roleSubtype,  // Use validated roleSubtype from request
       createdTime: new Date(),
       isActive: true,
       isVerified: false
