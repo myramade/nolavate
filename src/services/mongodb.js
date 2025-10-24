@@ -48,12 +48,17 @@ export function getDatabase() {
   return db;
 }
 
-process.on('SIGINT', async () => {
+export function getClient() {
+  return client;
+}
+
+export async function closeConnection() {
   if (client) {
     await client.close();
     console.log('MongoDB connection closed');
+    db = null;
+    client = null;
   }
-  process.exit(0);
-});
+}
 
-export { db };
+export { db, client };

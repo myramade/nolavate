@@ -163,6 +163,64 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - `GET /api/v1/auth/sessions`: Get all active sessions for current user
 - `POST /api/v1/auth/sessions/revoke-all`: Logout from all devices
 
+## API Improvements (October 24, 2025)
+
+### Standardized Response Format
+All API responses now follow a consistent structure using the `ApiResponse` utility:
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Success message",
+  "meta": { "pagination": { ... } },
+  "timestamp": "2025-10-24T12:00:00.000Z"
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "message": "Error message",
+  "errors": [ ... ],
+  "timestamp": "2025-10-24T12:00:00.000Z"
+}
+```
+
+**Helper Methods:**
+- `ApiResponse.success()` - Standard success response
+- `ApiResponse.error()` - Standard error response
+- `ApiResponse.validationError()` - Validation errors (400)
+- `ApiResponse.unauthorized()` - Auth errors (401)
+- `ApiResponse.forbidden()` - Permission errors (403)
+- `ApiResponse.notFound()` - Not found errors (404)
+- `ApiResponse.paginated()` - Paginated responses with metadata
+
+### Health Check Endpoints
+- `GET /health` - Basic health check
+- `GET /api/v1/health` - Detailed health with database status
+- `GET /api/v1/health/ready` - Readiness probe for deployments
+- `GET /api/v1/health/live` - Liveness probe for deployments
+
+### Graceful Shutdown
+- SIGTERM/SIGINT signal handlers
+- Closes HTTP server to stop accepting new connections
+- Closes MongoDB connections properly
+- 30-second timeout before forced shutdown
+
+### Pagination Standards
+- Default page: 1
+- Default page size: 20
+- Maximum page size: 100
+- Centralized in `PAGINATION_DEFAULTS` constant
+
+### Route Consolidation
+- Removed duplicate routes (backward compatibility routes)
+- All API routes now use `/api/v1/*` prefix
+- Cleaner route structure and easier maintenance
+
 ## External Dependencies
 
 - **Database**: MongoDB (Digital Ocean managed database).

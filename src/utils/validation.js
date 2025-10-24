@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PAGINATION_DEFAULTS, ApiResponse } from './response.js';
 
 export const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -41,8 +42,8 @@ export const categorySchema = z.enum(['INFO', 'EDUCATION', 'EXPERIENCE', 'INTERE
 });
 
 export const paginationSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().positive().max(100).default(20)
+  page: z.coerce.number().int().positive().default(PAGINATION_DEFAULTS.page),
+  pageSize: z.coerce.number().int().positive().max(PAGINATION_DEFAULTS.maxPageSize).default(PAGINATION_DEFAULTS.pageSize)
 });
 
 export function validateSchema(schema) {
@@ -56,17 +57,14 @@ export function validateSchema(schema) {
           message: err.message
         }));
         
-        return res.status(400).json({
-          message: 'Validation error',
-          errors
-        });
+        return ApiResponse.validationError(res, errors);
       }
       
       req.validatedBody = result.data;
       next();
     } catch (error) {
       console.error('Schema validation error:', error);
-      res.status(500).json({ message: 'Internal validation error' });
+      return ApiResponse.error(res, 'Internal validation error', 500);
     }
   };
 }
@@ -82,17 +80,14 @@ export function validateQuery(schema) {
           message: err.message
         }));
         
-        return res.status(400).json({
-          message: 'Invalid query parameters',
-          errors
-        });
+        return ApiResponse.validationError(res, errors);
       }
       
       req.validatedQuery = result.data;
       next();
     } catch (error) {
       console.error('Query validation error:', error);
-      res.status(500).json({ message: 'Internal validation error' });
+      return ApiResponse.error(res, 'Internal validation error', 500);
     }
   };
 }
@@ -108,17 +103,14 @@ export function validateParams(schema) {
           message: err.message
         }));
         
-        return res.status(400).json({
-          message: 'Invalid URL parameters',
-          errors
-        });
+        return ApiResponse.validationError(res, errors);
       }
       
       req.validatedParams = result.data;
       next();
     } catch (error) {
       console.error('Params validation error:', error);
-      res.status(500).json({ message: 'Internal validation error' });
+      return ApiResponse.error(res, 'Internal validation error', 500);
     }
   };
 }
