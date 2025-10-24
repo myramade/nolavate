@@ -1,140 +1,146 @@
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import {
   createUserAvatarUsingName,
   getFormattedDate,
 } from '../../services/helper.js';
+import { toObjectId } from '../../utils/mongoHelpers.js';
 
 export default async function getPostById(req, res, next) {
   const logger = container.make('logger');
   const post = container.make('models/post');
+  const user = container.make('models/user');
+  const company = container.make('models/company');
+  const personality = container.make('models/personality');
+  const comment = container.make('models/comment');
+  const postLike = container.make('models/postlike');
+  
   try {
+    // Load post with basic fields
     const result = await post.findById(req.query.id, {
-      id: true,
-      title: true,
-      description: true,
-      video: {
-        select: {
-          streamUrl: true,
-        },
-      },
-      user: {
-        select: {
-          id: true,
-          name: true,
-          photo: {
-            select: {
-              streamUrl: true,
-            },
-          },
-        },
-      },
-      likes: true,
-      views: true,
-      postType: true,
-      category: true,
-      industryType: true,
-      company: {
-        select: {
-          id: true,
-          name: true,
-          logo: {
-            select: {
-              streamUrl: true,
-            },
-          },
-        },
-      },
-      location: true,
-      functionalArea: true,
-      activeHiring: true,
-      positionType: true,
-      employmentType: true,
-      positionTitle: true,
-      experience: true,
-      compensation: true,
-      requiredSkills: true,
-      optionalSkills: true,
-      personalityPreference: {
-        select: {
-          title: true,
-          detail: true,
-        },
-      },
-      thumbnail: {
-        select: {
-          streamUrl: true,
-        },
-      },
-      comments: {
-        where: {
-          deletedTime: {
-            isSet: false,
-          },
-        },
-        select: {
-          comment: true,
-          user: {
-            select: {
-              name: true,
-              photo: {
-                select: {
-                  streamUrl: true,
-                },
-              },
-            },
-          },
-        },
-        skip: 0,
-        take: 10,
-      },
-      postLikes: {
-        where: {
-          user: {
-            is: {
-              id: req.token.sub,
-            },
-          },
-        },
-        select: {
-          id: true,
-        },
-      },
-      createdTime: true,
-      matchCount: true,
+      _id: 1,
+      title: 1,
+      description: 1,
+      video: 1,
+      userId: 1,
+      likes: 1,
+      views: 1,
+      postType: 1,
+      category: 1,
+      industryType: 1,
+      companyId: 1,
+      location: 1,
+      functionalArea: 1,
+      activeHiring: 1,
+      positionType: 1,
+      employmentType: 1,
+      positionTitle: 1,
+      experience: 1,
+      compensation: 1,
+      requiredSkills: 1,
+      optionalSkills: 1,
+      personalityPreferenceIds: 1,
+      thumbnail: 1,
+      createdTime: 1,
+      matchCount: 1,
     });
+    
     if (!result) {
       throw new Error('Post not found by ID.');
     }
-    // Set user photo as thumbnail
-    result.thumbnail = result.thumbnail.streamUrl;
-    result.user = undefined;
-    // Set video field as url instead of nesting url
-    result.video = result.video ? result.video.streamUrl : null;
-    // Set images as array of URLs
-    result.images = result.images
-      ? result.images.map((image) => image.streamUrl)
-      : null;
-    // Modify comments structure
-    result.comments = result.comments.map((comment) => {
-      comment.user.photo = comment.user.photo
-        ? comment.user.photo.streamUrl
-        : createUserAvatarUsingName(comment.user.name).streamUrl;
-      return comment;
-    });
-    // Company stucture
-    if (result.company) {
-      result.company.logo = result.company.logo.streamUrl || null;
+    
+    const postId = result._id;
+    
+    // Load all related data in parallel
+    const [userData, companyData, personalities, comments, postLikes] = await Promise.all([
+      result.userId ? user.findById(result.userId, { _id: 1, name: 1, photo: 1 }) : null,
+      result.companyId ? company.findById(result.companyId, { _id: 1, name: 1, logo: 1 }) : null,
+      result.personalityPreferenceIds && result.personalityPreferenceIds.length > 0
+        ? personality.findMany(
+            { _id: { $in: result.personalityPreferenceIds } },
+            { _id: 1, title: 1, detail: 1 }
+          )
+        : [],
+      comment.findMany(
+        { 
+          postId: postId,
+          deletedTime: { $exists: false }
+        },
+        { _id: 1, comment: 1, userId: 1 },
+        10,
+        0
+      ),
+      postLike.findMany(
+        { 
+          postId: postId,
+          userId: toObjectId(req.token.sub)
+        },
+        { _id: 1 }
+      ),
+    ]);
+    
+    // Load comment users if we have comments
+    let commentUsers = [];
+    if (comments && comments.length > 0) {
+      const commentUserIds = [...new Set(comments.map(c => c.userId))];
+      commentUsers = await user.findMany(
+        { _id: { $in: commentUserIds } },
+        { _id: 1, name: 1, photo: 1 }
+      );
     }
-    // Check if user liked Post
-    if (result.postLikes.length > 0) {
-      result.didLike = true;
-    } else {
-      result.didLike = false;
-    }
-    result.postLikes = undefined;
+    const commentUserMap = new Map(commentUsers.map(u => [u._id.toString(), u]));
+    
+    // Build response
+    const response = {
+      id: result._id.toString(),
+      title: result.title,
+      description: result.description,
+      video: result.video ? result.video.streamUrl : null,
+      user: undefined,
+      likes: result.likes,
+      views: result.views,
+      postType: result.postType,
+      category: result.category,
+      industryType: result.industryType,
+      company: companyData ? {
+        id: companyData._id.toString(),
+        name: companyData.name,
+        logo: companyData.logo?.streamUrl || null,
+      } : null,
+      location: result.location,
+      functionalArea: result.functionalArea,
+      activeHiring: result.activeHiring,
+      positionType: result.positionType,
+      employmentType: result.employmentType,
+      positionTitle: result.positionTitle,
+      experience: result.experience,
+      compensation: result.compensation,
+      requiredSkills: result.requiredSkills,
+      optionalSkills: result.optionalSkills,
+      personalityPreference: personalities.map(p => ({
+        title: p.title,
+        detail: p.detail,
+      })),
+      thumbnail: result.thumbnail?.streamUrl || null,
+      comments: comments.map(c => {
+        const commentUser = commentUserMap.get(c.userId.toString());
+        return {
+          comment: c.comment,
+          user: {
+            name: commentUser?.name || 'Unknown',
+            photo: commentUser?.photo?.streamUrl || createUserAvatarUsingName(commentUser?.name || 'Unknown').streamUrl,
+          },
+        };
+      }),
+      didLike: postLikes && postLikes.length > 0,
+      createdTime: result.createdTime,
+      matchCount: result.matchCount,
+      images: null,
+    };
+    
     // send results
     return res.send({
-      data: result,
+      data: response,
       details: {
         body: req.query,
       },

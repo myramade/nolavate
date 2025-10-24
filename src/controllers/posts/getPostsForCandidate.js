@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import {
   createUserAvatarUsingName,
@@ -5,234 +6,285 @@ import {
   shuffleArray,
   skipUndefined,
 } from '../../services/helper.js';
+import { toObjectId } from '../../utils/mongoHelpers.js';
 
 // For candidates
 export default async function getPosts(req, res, next) {
   const logger = container.make('logger');
   const post = container.make('models/post');
-  // const user = container.make('models/user')
   const jobSkill = container.make('models/jobskill');
+  const match = container.make('models/match');
+  const company = container.make('models/company');
+  const user = container.make('models/user');
+  const personality = container.make('models/personality');
+  const comment = container.make('models/comment');
+  const postLike = container.make('models/postlike');
+  
   try {
     // Pagination
     const offset = req.query.page * req.query.pageSize;
     const limit = req.query.pageSize;
-    // Get user personality traits
-    // const userData = await user.findById(req.token.sub, { personality: true })
+    
     let jobSkillIdsToNames;
     if (req.body.skills) {
-      jobSkillIdsToNames = await container.make('models/jobskill').findManyOr(
+      jobSkillIdsToNames = await jobSkill.findManyOr(
         req.body.skills.map((skillId) => {
           return {
-            id: skillId,
+            _id: toObjectId(skillId),
           };
         }),
-        { name: true },
+        { _id: 1, name: 1 },
       );
-      if (!jobSkillIdsToNames && jobSkillIdsToNames.length === 0) {
+      if (!jobSkillIdsToNames || jobSkillIdsToNames.length === 0) {
         return res.status(400).send({
           message: 'Job skill IDs provided are not valid.',
         });
       }
       jobSkillIdsToNames = jobSkillIdsToNames.map((skill) => skill.name);
     }
-    // Build prisma queries
-    const mongoQuery = skipUndefined({
+    
+    // Get accepted matches for this candidate (to exclude from results)
+    const acceptedMatches = await match.findMany(
+      {
+        candidateId: toObjectId(req.token.sub),
+        accepted: true,
+      },
+      { postId: 1 }
+    );
+    const acceptedPostIds = acceptedMatches.map(m => m.postId);
+    
+    // Build MongoDB query
+    const mongoQuery = {
       postType: 'JOB',
       archive: false,
-      // personalityPreference: {
-      //   has: userData.personality
-      // },
-      matches: {
-        none: {
-          AND: [
-            {
-              candidateId: {
-                equals: req.token.sub,
-              },
-            },
-            {
-              accepted: true,
-            },
-          ],
-        },
-      },
-      OR: [
-        req.body.skills
-          ? {
-              requiredSkills: {
-                hasSome: jobSkillIdsToNames,
-              },
-            }
-          : undefined,
-        req.body.skills
-          ? {
-              optionalSkills: {
-                hasSome: jobSkillIdsToNames,
-              },
-            }
-          : undefined,
-      ],
-    });
-    mongoQuery.OR = mongoQuery.OR.filter((or) => or !== undefined);
-    if (mongoQuery.OR.length === 0) {
-      mongoQuery.OR = undefined;
+    };
+    
+    // Exclude posts that the candidate has already accepted matches for
+    if (acceptedPostIds.length > 0) {
+      mongoQuery._id = { $nin: acceptedPostIds };
     }
-    // Get list of job skill
+    
+    // Filter by skills if provided
+    if (req.body.skills && jobSkillIdsToNames && jobSkillIdsToNames.length > 0) {
+      mongoQuery.$or = [
+        { requiredSkills: { $in: jobSkillIdsToNames } },
+        { optionalSkills: { $in: jobSkillIdsToNames } },
+      ];
+    }
+    
+    // Get list of job skills
     const jobSkills = await jobSkill.findMany(
       {
-        useCount: {
-          gt: 0,
-        },
+        useCount: { $gt: 0 },
       },
       {
-        id: true,
-        name: true,
-        order: true,
-        useCount: true,
+        _id: 1,
+        name: 1,
+        order: 1,
+        useCount: 1,
       },
       limit,
       offset,
       'useCount',
       'desc',
     );
-    // Get results
+    
+    // Get results (posts without nested data)
     const results = await post.findMany(
       mongoQuery,
       {
-        id: true,
-        title: true,
-        description: true,
-        video: {
-          select: {
-            streamUrl: true,
-          },
-        },
-        likes: true,
-        views: true,
-        postType: true,
-        category: true,
-        company: {
-          select: {
-            id: true,
-            name: true,
-            logo: {
-              select: {
-                streamUrl: true,
-              },
-            },
-          },
-        },
-        location: true,
-        industryType: true,
-        functionalArea: true,
-        activeHiring: true,
-        positionType: true,
-        employmentType: true,
-        positionTitle: true,
-        experience: true,
-        compensation: true,
-        requiredSkills: true,
-        optionalSkills: true,
-        comments: {
-          where: {
-            deletedTime: {
-              isSet: false,
-            },
-          },
-          select: {
-            comment: true,
-            user: {
-              select: {
-                name: true,
-                photo: {
-                  select: {
-                    streamUrl: true,
-                  },
-                },
-              },
-            },
-          },
-          skip: 0,
-          take: 10,
-        },
-        personalityPreference: {
-          select: {
-            title: true,
-            detail: true,
-          },
-        },
-        thumbnail: {
-          select: {
-            streamUrl: true,
-          },
-        },
-        createdTime: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            photo: {
-              select: {
-                streamUrl: true,
-              },
-            },
-          },
-        },
-        postLikes: {
-          where: {
-            user: {
-              is: {
-                id: req.token.sub,
-              },
-            },
-          },
-          select: {
-            id: true,
-          },
-        },
-        matchCount: true,
+        _id: 1,
+        title: 1,
+        description: 1,
+        video: 1,
+        likes: 1,
+        views: 1,
+        postType: 1,
+        category: 1,
+        companyId: 1,
+        location: 1,
+        industryType: 1,
+        functionalArea: 1,
+        activeHiring: 1,
+        positionType: 1,
+        employmentType: 1,
+        positionTitle: 1,
+        experience: 1,
+        compensation: 1,
+        requiredSkills: 1,
+        optionalSkills: 1,
+        personalityPreferenceIds: 1,
+        thumbnail: 1,
+        createdTime: 1,
+        userId: 1,
+        matchCount: 1,
       },
       limit,
       offset,
     );
-    // Return results by postType
+    
+    if (!results || results.length === 0) {
+      return res.send({
+        data: {
+          JOB: [],
+          SKILLS: jobSkills.map(s => ({
+            id: s._id.toString(),
+            name: s.name,
+            order: s.order,
+            useCount: s.useCount,
+          })),
+        },
+        details: {
+          ...req.query,
+        },
+        generatedAt: getFormattedDate(),
+      });
+    }
+    
+    // Collect unique IDs for batch loading
+    const companyIds = new Set();
+    const userIds = new Set();
+    const personalityIds = new Set();
+    const postIds = results.map(r => r._id);
+    
+    results.forEach(result => {
+      if (result.companyId) companyIds.add(result.companyId.toString());
+      if (result.userId) userIds.add(result.userId.toString());
+      if (result.personalityPreferenceIds) {
+        result.personalityPreferenceIds.forEach(id => personalityIds.add(id.toString()));
+      }
+    });
+    
+    // Load all related data in parallel
+    const [companies, users, personalities, comments, postLikes] = await Promise.all([
+      companyIds.size > 0 ? company.findMany(
+        { _id: { $in: Array.from(companyIds).map(id => new ObjectId(id)) } },
+        { _id: 1, name: 1, logo: 1 }
+      ) : Promise.resolve([]),
+      userIds.size > 0 ? user.findMany(
+        { _id: { $in: Array.from(userIds).map(id => new ObjectId(id)) } },
+        { _id: 1, name: 1, photo: 1 }
+      ) : Promise.resolve([]),
+      personalityIds.size > 0 ? personality.findMany(
+        { _id: { $in: Array.from(personalityIds).map(id => new ObjectId(id)) } },
+        { _id: 1, title: 1, detail: 1 }
+      ) : Promise.resolve([]),
+      comment.findMany(
+        { 
+          postId: { $in: postIds },
+          deletedTime: { $exists: false }
+        },
+        { _id: 1, postId: 1, comment: 1, userId: 1 },
+        10,
+        0
+      ),
+      postLike.findMany(
+        { 
+          postId: { $in: postIds },
+          userId: toObjectId(req.token.sub)
+        },
+        { _id: 1, postId: 1 }
+      ),
+    ]);
+    
+    // Create lookup maps
+    const companyMap = new Map(companies.map(c => [c._id.toString(), c]));
+    const userMap = new Map(users.map(u => [u._id.toString(), u]));
+    const personalityMap = new Map(personalities.map(p => [p._id.toString(), p]));
+    
+    // Group comments by postId
+    const commentsByPost = {};
+    for (const c of comments) {
+      const postIdStr = c.postId.toString();
+      if (!commentsByPost[postIdStr]) {
+        commentsByPost[postIdStr] = [];
+      }
+      if (commentsByPost[postIdStr].length < 10) {
+        const commentUser = userMap.get(c.userId.toString());
+        commentsByPost[postIdStr].push({
+          comment: c.comment,
+          user: {
+            name: commentUser?.name || 'Unknown',
+            photo: commentUser?.photo?.streamUrl || createUserAvatarUsingName(commentUser?.name || 'Unknown').streamUrl,
+          },
+        });
+      }
+    }
+    
+    // Group post likes by postId
+    const likesByPost = new Set(postLikes.map(l => l.postId.toString()));
+    
+    // Build final results
     const finalResult = {
       JOB: [],
-      SKILLS: jobSkills,
+      SKILLS: jobSkills.map(s => ({
+        id: s._id.toString(),
+        name: s.name,
+        order: s.order,
+        useCount: s.useCount,
+      })),
     };
+    
     for (let i = 0; i < results.length; i++) {
-      // Set user photo as thumbnail
-      results[i].thumbnail = results[i].thumbnail.streamUrl;
-      results[i].user = undefined;
-      // Set video field as url instead of nesting url
-      results[i].video = results[i].video ? results[i].video.streamUrl : null;
-      // Set images as array of URLs
-      results[i].images = results[i].images
-        ? results[i].images.map((image) => image.streamUrl)
-        : null;
-      // Modify comments structure
-      results[i].comments = results[i].comments.map((comment) => {
-        comment.user.photo = comment.user.photo
-          ? comment.user.photo.streamUrl
-          : createUserAvatarUsingName(comment.user.name).streamUrl;
-        return comment;
-      });
-      // Company stucture
-      if (results[i].company) {
-        results[i].company.logo = results[i].company.logo.streamUrl || null;
+      const result = results[i];
+      const postIdStr = result._id.toString();
+      const companyData = result.companyId ? companyMap.get(result.companyId.toString()) : null;
+      const userData = result.userId ? userMap.get(result.userId.toString()) : null;
+      
+      // Get personality preferences
+      const personalityPrefs = [];
+      if (result.personalityPreferenceIds) {
+        for (const pId of result.personalityPreferenceIds) {
+          const p = personalityMap.get(pId.toString());
+          if (p) {
+            personalityPrefs.push({
+              title: p.title,
+              detail: p.detail,
+            });
+          }
+        }
       }
-      // Check if user liked Post
-      if (results[i].postLikes.length > 0) {
-        results[i].didLike = true;
-      } else {
-        results[i].didLike = false;
-      }
-      results[i].postLikes = undefined;
-      // Create final result
-      finalResult[results[i].postType].push(results[i]);
+      
+      const formattedResult = {
+        id: postIdStr,
+        title: result.title,
+        description: result.description,
+        video: result.video ? result.video.streamUrl : null,
+        likes: result.likes,
+        views: result.views,
+        postType: result.postType,
+        category: result.category,
+        company: companyData ? {
+          id: companyData._id.toString(),
+          name: companyData.name,
+          logo: companyData.logo?.streamUrl || null,
+        } : null,
+        location: result.location,
+        industryType: result.industryType,
+        functionalArea: result.functionalArea,
+        activeHiring: result.activeHiring,
+        positionType: result.positionType,
+        employmentType: result.employmentType,
+        positionTitle: result.positionTitle,
+        experience: result.experience,
+        compensation: result.compensation,
+        requiredSkills: result.requiredSkills,
+        optionalSkills: result.optionalSkills,
+        comments: commentsByPost[postIdStr] || [],
+        personalityPreference: personalityPrefs,
+        thumbnail: result.thumbnail?.streamUrl || null,
+        createdTime: result.createdTime,
+        user: undefined,
+        didLike: likesByPost.has(postIdStr),
+        matchCount: result.matchCount,
+      };
+      
+      finalResult.JOB.push(formattedResult);
     }
+    
     // Shuffle contents in array in place
     shuffleArray(finalResult.JOB);
+    
     // send results
     res.send({
       data: finalResult,

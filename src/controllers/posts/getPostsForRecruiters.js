@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import {
   createUserAvatarUsingName,
@@ -5,6 +6,7 @@ import {
   shuffleArray,
   skipUndefined,
 } from '../../services/helper.js';
+import { toObjectId } from '../../utils/mongoHelpers.js';
 
 const createProfileSummary = (resumeData) => {
   if (!resumeData) {
@@ -22,6 +24,9 @@ export default async function getPostsForRecruiters(req, res, next) {
   const user = container.make('models/user');
   const transcription = container.make('models/transcription');
   const jobSkill = container.make('models/jobskill');
+  const match = container.make('models/match');
+  const personality = container.make('models/personality');
+  
   try {
     // Check if database is connected
     if (!user) {
@@ -34,18 +39,17 @@ export default async function getPostsForRecruiters(req, res, next) {
     // Pagination
     const offset = req.query.page * req.query.pageSize;
     const limit = req.query.pageSize;
-    // Get user personality traits
-    // const userData = await user.findById(req.token.sub, { id: true, personality: true })
+    
     let jobSkillIdsToNames;
     if (req.body && req.body.skills && jobSkill) {
       try {
         jobSkillIdsToNames = await jobSkill.findManyOr(
           req.body.skills.map((skillId) => {
             return {
-              id: skillId,
+              _id: toObjectId(skillId),
             };
           }),
-          { name: true },
+          { _id: 1, name: 1 },
         );
         if (!jobSkillIdsToNames || jobSkillIdsToNames.length === 0) {
           return res.status(400).send({
@@ -58,81 +62,57 @@ export default async function getPostsForRecruiters(req, res, next) {
         jobSkillIdsToNames = null;
       }
     }
-    // Build prisma queries
-    const mongoQuery = skipUndefined({
-      // personality: {
-      //   equals: userData.personality
-      // },
-      recruiterMatches: {
-        none: {
-          recruiterId: {
-            equals: req.token.sub,
-          },
-          accepted: false,
-        },
+    
+    // Get ALL recruiter matches (exclude all matched candidates, regardless of accepted status)
+    const existingMatches = await match.findMany(
+      {
+        recruiterId: toObjectId(req.token.sub),
       },
-      skills: req.body && req.body.skills && jobSkillIdsToNames && jobSkillIdsToNames.length > 0
-        ? {
-            hasSome: jobSkillIdsToNames,
-          }
-        : undefined,
-      matchMedia: {
-        isEmpty: false,
+      { candidateId: 1 }
+    );
+    const matchedCandidateIds = existingMatches.map(m => m.candidateId);
+    
+    // Build MongoDB query
+    const mongoQuery = {
+      _id: { 
+        $ne: toObjectId(req.token.sub),
+        $nin: matchedCandidateIds.length > 0 ? matchedCandidateIds : []
       },
-    });
+      roleSubtype: { $ne: 'RECRUITER' },
+      role: { $ne: 'TESTER' },
+      matchMedia: { $exists: true, $ne: [] }, // Not empty
+    };
+    
+    // Filter by skills if provided
+    if (req.body && req.body.skills && jobSkillIdsToNames && jobSkillIdsToNames.length > 0) {
+      mongoQuery.skills = { $in: jobSkillIdsToNames };
+    }
+    
     // Get results
     let results = [];
     try {
       results = await user.findMany(
         mongoQuery,
         {
-          id: true,
-          email: true,
-          phone: true,
-          phoneCountryCode: true,
-          name: true,
-          photo: {
-            select: {
-              streamUrl: true,
-            },
-          },
-          matchMedia: {
-            select: {
-              id: true,
-              streamUrl: true,
-              category: true,
-            },
-          },
-          roleSubtype: true,
-          employmentStatus: true,
-          employmentTitle: true,
-          personality: {
-            select: {
-              title: true,
-              detail: true,
-            },
-          },
-          resumeData: true,
-          industry: true,
-          skills: true,
+          _id: 1,
+          email: 1,
+          phone: 1,
+          phoneCountryCode: 1,
+          name: 1,
+          photo: 1,
+          matchMedia: 1,
+          roleSubtype: 1,
+          employmentStatus: 1,
+          employmentTitle: 1,
+          personalityId: 1,
+          resumeData: 1,
+          industry: 1,
+          skills: 1,
         },
         limit,
         offset,
         'createdTime',
         'desc',
-        null,
-        null,
-        {
-          id: {
-            not: req.token.sub,
-          },
-          roleSubtype: {
-            not: 'RECRUITER',
-          },
-          role: {
-            not: 'TESTER',
-          },
-        },
       );
     } catch (dbError) {
       logger.error('User query failed:', dbError.message);
@@ -141,21 +121,20 @@ export default async function getPostsForRecruiters(req, res, next) {
         message: 'Unable to retrieve candidate prospects. The database is currently experiencing issues. Please try again later.',
       });
     }
-    // Get list of job skill
+    
+    // Get list of job skills
     let jobSkills = [];
     if (jobSkill) {
       try {
         jobSkills = await jobSkill.findMany(
           {
-            useCount: {
-              gt: 0,
-            },
+            useCount: { $gt: 0 },
           },
           {
-            id: true,
-            name: true,
-            order: true,
-            useCount: true,
+            _id: 1,
+            name: 1,
+            order: 1,
+            useCount: 1,
           },
           limit,
           offset,
@@ -166,74 +145,108 @@ export default async function getPostsForRecruiters(req, res, next) {
         logger.warn('Job skills lookup failed, continuing with empty list:', dbError.message);
       }
     }
+    
+    // Collect personality IDs
+    const personalityIds = new Set();
+    results.forEach(r => {
+      if (r.personalityId) {
+        personalityIds.add(r.personalityId.toString());
+      }
+    });
+    
+    // Load personalities
+    let personalities = [];
+    if (personalityIds.size > 0 && personality) {
+      try {
+        personalities = await personality.findMany(
+          { _id: { $in: Array.from(personalityIds).map(id => new ObjectId(id)) } },
+          { _id: 1, title: 1, detail: 1 }
+        );
+      } catch (dbError) {
+        logger.warn('Personality lookup failed, continuing without personalities:', dbError.message);
+      }
+    }
+    const personalityMap = new Map(personalities.map(p => [p._id.toString(), p]));
+    
     // Get match media transcriptions
     let transcripts = [];
-    if (transcription) {
+    if (transcription && results.length > 0) {
       try {
-        transcripts = await transcription.findManyOr(
-          results.map((user) => {
-            return {
-              user: {
-                is: {
-                  id: user.id,
-                },
-              },
-            };
-          }),
-          {
-            user: {
-              select: {
-                id: true,
-              },
-            },
-            text: true,
-            mediaId: true,
-          },
+        const userIds = results.map(u => u._id);
+        transcripts = await transcription.findMany(
+          { userId: { $in: userIds } },
+          { _id: 1, userId: 1, text: 1, mediaId: 1 }
         );
       } catch (dbError) {
         logger.warn('Transcription lookup failed, continuing without transcripts:', dbError.message);
       }
     }
+    
+    // Group transcripts by user ID and media ID
+    const transcriptMap = {};
+    transcripts.forEach(t => {
+      const key = `${t.userId.toString()}_${t.mediaId}`;
+      transcriptMap[key] = t.text;
+    });
+    
     // Return results by postType
     // JOB will never be populated for this response, but we
     // need to make its compatible with the getPosts (for candidates) endpoint
     const finalResult = {
       SOCIAL: [],
-      jobSkills,
+      jobSkills: jobSkills.map(s => ({
+        id: s._id.toString(),
+        name: s.name,
+        order: s.order,
+        useCount: s.useCount,
+      })),
     };
+    
     for (let i = 0; i < results.length; i++) {
-      // Set user photo as thumbnail
-      results[i].thumbnail = results[i].photo
-        ? results[i].photo.streamUrl
-        : createUserAvatarUsingName(results[i].name).streamUrl;
-      if (results[i].photo) {
-        results[i].photo = results[i].photo.streamUrl;
-      }
-      // Format phone number
-      results[i].phone = `${results[i].phoneCountryCode || ''}${results[i].phone}`;
-      results[i].phoneCountryCode = undefined;
-      // Get match media transcripts - this is really expensive
-      results[i].matchMedia.forEach((media) => {
-        for (let j = 0; j < transcripts.length; j++) {
-          if (transcripts[j].user.id === results[i].id) {
-            if (media.id === transcripts[j].mediaId) {
-              media.text = transcripts[j].text;
-            }
-          }
-        }
+      const result = results[i];
+      
+      // Get personality
+      const personalityData = result.personalityId ? personalityMap.get(result.personalityId.toString()) : null;
+      
+      // Format match media with transcripts
+      const matchMedia = (result.matchMedia || []).map(media => {
+        const transcriptKey = `${result._id.toString()}_${media.id}`;
+        return {
+          id: media.id,
+          streamUrl: media.streamUrl,
+          category: media.category,
+          text: transcriptMap[transcriptKey] || undefined,
+        };
       });
-      // Update resume data object
-      results[i].profileSummary = createProfileSummary(results[i].resumeData);
-      results[i].resumeData = undefined;
-      // Show recruiter the candidates first name if they are not a match
-      results[i].name = results[i].name.split(' ')[0];
-      // Create final result
-      finalResult.SOCIAL.push(results[i]);
+      
+      const formattedResult = {
+        id: result._id.toString(),
+        email: result.email,
+        phone: `${result.phoneCountryCode || ''}${result.phone}`,
+        name: result.name.split(' ')[0], // Show first name only for non-matches
+        photo: result.photo?.streamUrl || createUserAvatarUsingName(result.name).streamUrl,
+        thumbnail: result.photo?.streamUrl || createUserAvatarUsingName(result.name).streamUrl,
+        matchMedia: matchMedia,
+        roleSubtype: result.roleSubtype,
+        employmentStatus: result.employmentStatus,
+        employmentTitle: result.employmentTitle,
+        personality: personalityData ? {
+          title: personalityData.title,
+          detail: personalityData.detail,
+        } : null,
+        profileSummary: createProfileSummary(result.resumeData),
+        industry: result.industry,
+        skills: result.skills,
+      };
+      
+      finalResult.SOCIAL.push(formattedResult);
     }
+    
     // Shuffle array in place
     if (req.query.shuffle) {
       shuffleArray(finalResult.SOCIAL);
     }
+    
     // send results
     res.send({
       data: finalResult,

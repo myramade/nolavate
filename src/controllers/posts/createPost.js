@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import ObjectID from 'bson-objectid';
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import {
   createUserAvatarUsingName,
@@ -10,6 +11,7 @@ import {
   skipUndefined,
   toTitleCase,
 } from '../../services/helper.js';
+import { toObjectId } from '../../utils/mongoHelpers.js';
 
 const handleSkills = async (req) => {
   let requiredSkills = [];
@@ -180,24 +182,15 @@ export default async function createPost(req, res, next) {
       throw new Error('Post must have one video.');
     }
     const userVideo = req.file;
-    // Get user document
+    // Get user document (MongoDB native syntax)
     const userDocument = await user.findById(req.token.sub, {
-      id: true,
-      name: true,
-      employer: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      photo: {
-        select: {
-          streamUrl: true,
-        },
-      },
+      _id: 1,
+      name: 1,
+      employerId: 1,
+      photo: 1,
     });
     // Ensure only recruiters can create JOB posts
-    if (!userDocument.employer && req.token.roleSubtype === 'RECRUITER') {
+    if (!userDocument.employerId && req.token.roleSubtype === 'RECRUITER') {
       return res.status(400).send({
         message:
           "Only recruiters can create JOB posts. If you're a recruiter ensure your account is associated with a company.",
@@ -233,109 +226,98 @@ export default async function createPost(req, res, next) {
       return res.status(400).send(pError);
     }
 
-    // Create post document
+    // Create post document (MongoDB native syntax)
     // Thumbnail of the post (default this will be the avatar of the user creating post)
     const temporaryThumbnail = userDocument.photo
       ? userDocument.photo.streamUrl
       : createUserAvatarUsingName(userDocument.name).streamUrl;
-    const result = await post.create(
-      skipUndefined(
-        {
-          title: req.body.title,
-          description: req.body.description,
-          user: {
-            connect: {
-              id: req.token.sub,
-            },
-          },
-          postType,
-          company: userDocument.employer
-            ? {
-                connect: {
-                  id: userDocument.employer.id,
-                },
-              }
-            : undefined,
-          personalityPreference: {
-            connect: personalities.map((personality) => {
-              return {
-                id: personality.id,
-              };
-            }),
-          },
-          category: req.body.category,
-          industryType: req.body.industryType,
-          functionalArea: req.body.functionalArea,
-          activeHiring: true && req.body.activeHiring !== 'false',
-          location: req.body.location,
-          positionType: req.body.positionType
-            ? req.body.positionType.toUpperCase()
-            : null,
-          positionTitle: req.body.positionTitle,
-          experience: req.body.experience,
-          employmentType: req.body.employmentType
-            ? req.body.employmentType.toUpperCase()
-            : undefined,
-          compensation: req.body.compensation,
-          requiredSkills: skills.requiredSkills,
-          optionalSkills: skills.optionalSkills,
-          video: Object.keys(videoData).length > 0 ? videoData : undefined,
-          thumbnail: {
-            id: ObjectID().toHexString(),
-            storagePath: temporaryThumbnail,
-            streamUrl: temporaryThumbnail,
-            downloadUrl: temporaryThumbnail,
-            mediaType: 'JPEG',
-            category: 'THUMBNAIL',
-            count: 1,
-          },
-        },
-        true,
-      ),
+    
+    // Convert personality IDs to ObjectId array
+    const personalityIds = personalities.map(p => toObjectId(p.id || p._id));
+    
+    const postData = skipUndefined(
       {
-        id: true,
-        title: true,
-        description: true,
-        postType: true,
-        company: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        personalityPreference: {
-          select: {
-            title: true,
-            detail: true,
-          },
-        },
-        category: true,
-        industryType: true,
-        functionalArea: true,
-        activeHiring: true,
-        location: true,
-        positionType: true,
-        positionTitle: true,
-        experience: true,
-        employmentType: true,
-        compensation: true,
-        requiredSkills: true,
-        optionalSkills: true,
-        video: {
-          select: {
-            streamUrl: true,
-          },
-        },
+        title: req.body.title,
+        description: req.body.description,
+        userId: toObjectId(req.token.sub),
+        postType,
+        companyId: userDocument.employerId ? toObjectId(userDocument.employerId) : undefined,
+        personalityPreferenceIds: personalityIds.length > 0 ? personalityIds : undefined,
+        category: req.body.category,
+        industryType: req.body.industryType,
+        functionalArea: req.body.functionalArea,
+        activeHiring: true && req.body.activeHiring !== 'false',
+        location: req.body.location,
+        positionType: req.body.positionType
+          ? req.body.positionType.toUpperCase()
+          : null,
+        positionTitle: req.body.positionTitle,
+        experience: req.body.experience,
+        employmentType: req.body.employmentType
+          ? req.body.employmentType.toUpperCase()
+          : undefined,
+        compensation: req.body.compensation,
+        requiredSkills: skills.requiredSkills,
+        optionalSkills: skills.optionalSkills,
+        video: Object.keys(videoData).length > 0 ? videoData : undefined,
         thumbnail: {
-          select: {
-            streamUrl: true,
-          },
+          id: ObjectID().toHexString(),
+          storagePath: temporaryThumbnail,
+          streamUrl: temporaryThumbnail,
+          downloadUrl: temporaryThumbnail,
+          mediaType: 'JPEG',
+          category: 'THUMBNAIL',
+          count: 1,
         },
-        createdTime: true,
+        createdTime: new Date(),
       },
+      true,
     );
-    // Set video field as url instead of nesting url
-    result.video = result.video ? result.video.streamUrl : null;
+    
+    const createdPost = await post.create(postData);
+    
+    // Load related data separately for response
+    const company = container.make('models/company');
+    const personality = container.make('models/personality');
+    
+    const [companyData, personalityData] = await Promise.all([
+      userDocument.employerId ? company.findById(userDocument.employerId, { _id: 1, name: 1 }) : null,
+      personalityIds.length > 0 ? personality.findMany(
+        { _id: { $in: personalityIds } },
+        { _id: 1, title: 1, detail: 1 }
+      ) : []
+    ]);
+    
+    // Build response matching the expected format
+    const result = {
+      id: createdPost._id.toString(),
+      title: createdPost.title,
+      description: createdPost.description,
+      postType: createdPost.postType,
+      company: companyData ? {
+        id: companyData._id.toString(),
+        name: companyData.name,
+      } : null,
+      personalityPreference: personalityData.map(p => ({
+        title: p.title,
+        detail: p.detail,
+      })),
+      category: createdPost.category,
+      industryType: createdPost.industryType,
+      functionalArea: createdPost.functionalArea,
+      activeHiring: createdPost.activeHiring,
+      location: createdPost.location,
+      positionType: createdPost.positionType,
+      positionTitle: createdPost.positionTitle,
+      experience: createdPost.experience,
+      employmentType: createdPost.employmentType,
+      compensation: createdPost.compensation,
+      requiredSkills: createdPost.requiredSkills,
+      optionalSkills: createdPost.optionalSkills,
+      video: createdPost.video ? createdPost.video.streamUrl : null,
+      thumbnail: createdPost.thumbnail,
+      createdTime: createdPost.createdTime,
+    };
     // send results
     res.send({
       data: skipUndefined(result, true),
@@ -344,7 +326,7 @@ export default async function createPost(req, res, next) {
       },
       generatedAt: getFormattedDate(),
     });
-    // Generate personalites for JOB posts
+    // Generate personalites for JOB posts (MongoDB native syntax)
     if (postType === 'JOB' && personalities.length === 0) {
       container
         .make('perplexity-personality-job')(req.body.description)
@@ -357,21 +339,14 @@ export default async function createPost(req, res, next) {
                   title: personalityName,
                 };
               }),
-              { id: true, title: true },
+              { _id: 1, title: 1 },
             );
-          // Update JOB post
+          // Update JOB post with personality IDs array
           await post.updateById(
             result.id,
             {
-              personalityPreference: {
-                connect: personalityTypeNamesToIds.map((p) => {
-                  return {
-                    id: p.id,
-                  };
-                }),
-              },
+              personalityPreferenceIds: personalityTypeNamesToIds.map((p) => toObjectId(p._id)),
             },
-            { id: true },
           );
         })
         .catch((err) => {
