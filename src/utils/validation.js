@@ -52,10 +52,10 @@ export function validateSchema(schema) {
       const result = schema.safeParse(req.body);
       
       if (!result.success) {
-        const errors = result.error.errors.map(err => ({
+        const errors = result.error?.errors?.map(err => ({
           field: err.path.join('.'),
           message: err.message
-        }));
+        })) || [{ field: 'unknown', message: 'Validation failed' }];
         
         return ApiResponse.validationError(res, errors);
       }
@@ -75,10 +75,10 @@ export function validateQuery(schema) {
       const result = schema.safeParse(req.query);
       
       if (!result.success) {
-        const errors = result.error.errors.map(err => ({
+        const errors = result.error?.errors?.map(err => ({
           field: err.path.join('.'),
           message: err.message
-        }));
+        })) || [{ field: 'unknown', message: 'Validation failed' }];
         
         return ApiResponse.validationError(res, errors);
       }
@@ -98,10 +98,10 @@ export function validateParams(schema) {
       const result = schema.safeParse(req.params);
       
       if (!result.success) {
-        const errors = result.error.errors.map(err => ({
+        const errors = result.error?.errors?.map(err => ({
           field: err.path.join('.'),
           message: err.message
-        }));
+        })) || [{ field: 'unknown', message: 'Validation failed' }];
         
         return ApiResponse.validationError(res, errors);
       }

@@ -81,10 +81,6 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// NoSQL Injection protection
-import { preventNoSQLInjection } from './utils/sanitization.js';
-app.use(preventNoSQLInjection());
-
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
 

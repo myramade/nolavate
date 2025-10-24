@@ -106,21 +106,45 @@ export function validateObjectId(id) {
   }
 }
 
-export function preventNoSQLInjection(middleware) {
+export function preventNoSQLInjection() {
   return (req, res, next) => {
-    // Sanitize query parameters
+    // Sanitize query parameters (modify in place for Express 5 compatibility)
     if (req.query && typeof req.query === 'object') {
-      req.query = sanitizeMongoQuery(req.query);
+      const sanitized = sanitizeMongoQuery(req.query);
+      // Delete all existing keys
+      for (const key in req.query) {
+        if (Object.prototype.hasOwnProperty.call(req.query, key)) {
+          delete req.query[key];
+        }
+      }
+      // Add sanitized keys
+      Object.assign(req.query, sanitized);
     }
 
-    // Sanitize body
-    if (req.body && typeof req.body === 'object') {
-      req.body = sanitizeUserInput(req.body);
+    // Sanitize body (modify in place for Express 5 compatibility)
+    if (req.body && typeof req.body === 'object' && !Array.isArray(req.body)) {
+      const sanitized = sanitizeUserInput(req.body);
+      // Delete all existing keys
+      for (const key in req.body) {
+        if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+          delete req.body[key];
+        }
+      }
+      // Add sanitized keys
+      Object.assign(req.body, sanitized);
     }
 
-    // Sanitize params
-    if (req.params && typeof req.params === 'object') {
-      req.params = sanitizeUserInput(req.params);
+    // Sanitize params (modify in place for Express 5 compatibility)
+    if (req.params && typeof req.params === 'object' && !Array.isArray(req.params)) {
+      const sanitized = sanitizeUserInput(req.params);
+      // Delete all existing keys
+      for (const key in req.params) {
+        if (Object.prototype.hasOwnProperty.call(req.params, key)) {
+          delete req.params[key];
+        }
+      }
+      // Add sanitized keys
+      Object.assign(req.params, sanitized);
     }
 
     next();
