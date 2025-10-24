@@ -53,6 +53,7 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 
 ### Feature Specifications
 - **Candidate Dashboard**: Features include browsing job postings, viewing matched job opportunities, taking/retaking personality assessments, and managing profile information.
+  - **Assessment Onboarding**: New candidates are automatically prompted to complete the DISC assessment on first login with a friendly welcome screen. A persistent banner reminds users who haven't completed it. Results display prominently in a personality summary widget within the Jobs tab.
 - **Recruiter Dashboard**: Features include listing posted job positions, viewing prospect candidates, viewing matched candidates, managing profile information with job/match statistics, company profile management, and job creation/import.
 - **Core Functionality**: User registration, login, job posting, candidate matching, and assessment management.
 
