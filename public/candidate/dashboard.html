@@ -31,6 +31,9 @@
 
     <!-- Jobs Tab -->
     <div id="tab-jobs" class="tab-content active">
+      <!-- Personality Summary (only shown if assessment completed) -->
+      <div id="personalitySummary" style="display: none;"></div>
+      
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">Available Positions</h2>
@@ -77,7 +80,65 @@
   <script>
     // Initialize
     const user = getUser();
-    document.getElementById('welcomeMessage').textContent = `Welcome back, ${user.name}!`;
+    let hasAssessment = false;
+    
+    // Check if user has taken assessment on load
+    async function checkAssessmentStatus() {
+      try {
+        const response = await apiCall('/api/v1/assessment/results');
+        if (response && response.data) {
+          hasAssessment = true;
+          document.getElementById('welcomeMessage').textContent = `Welcome back, ${user.name}!`;
+        }
+      } catch (error) {
+        // User hasn't taken assessment yet
+        if (error.status === 404 || error.statusCode === 404 || error.message.includes('not taken')) {
+          hasAssessment = false;
+          // Show welcoming message for new users
+          document.getElementById('welcomeMessage').textContent = `Welcome, ${user.name}!`;
+          // Auto-switch to assessment tab for new users
+          setTimeout(() => {
+            switchTab('assessment');
+            showAssessmentWelcome();
+          }, 500);
+        }
+      }
+    }
+    
+    // Show welcome message for new users to take assessment
+    function showAssessmentWelcome() {
+      const container = document.getElementById('assessmentContainer');
+      if (container && !hasAssessment) {
+        container.innerHTML = `
+          <div style="max-width: 700px; margin: 0 auto; text-align: center;">
+            <div style="font-size: 64px; margin-bottom: 24px;">🎯</div>
+            <h2 style="margin-bottom: 16px;">Welcome to Culture Forward!</h2>
+            <p style="color: var(--text-light); font-size: 18px; line-height: 1.6; margin-bottom: 32px;">
+              Let's start by understanding your personality and work preferences. 
+              This quick assessment will help us match you with the perfect job opportunities.
+            </p>
+            <div style="background: var(--bg-light); padding: 24px; border-radius: 12px; margin-bottom: 32px; text-align: left;">
+              <h3 style="margin-bottom: 16px;">What to expect:</h3>
+              <ul style="color: var(--text-light); line-height: 2; list-style: none; padding: 0;">
+                <li>✓ 15-20 quick questions</li>
+                <li>✓ Takes about 5 minutes</li>
+                <li>✓ No right or wrong answers</li>
+                <li>✓ Discover your personality type</li>
+                <li>✓ Get personalized job recommendations</li>
+              </ul>
+            </div>
+            <button class="btn btn-primary" style="font-size: 18px; padding: 16px 48px;" onclick="startAssessment()">
+              Get Started
+            </button>
+          </div>
+        `;
+      }
+    }
+    
+    // Start assessment
+    window.startAssessment = () => {
+      loadAssessmentQuestions();
+    };
 
     // Load Jobs
     async function loadJobs() {
@@ -167,6 +228,9 @@
         const resultsResponse = await apiCall('/api/v1/assessment/results');
         
         if (resultsResponse && resultsResponse.data) {
+          // Update flag if we successfully got results
+          hasAssessment = true;
+          
           // User has taken assessment - show results
           const result = resultsResponse.data;
           document.getElementById('assessmentContainer').innerHTML = `
@@ -287,8 +351,25 @@
           body: JSON.stringify({ answers: answers })
         });
         
+        // Update flag - user now has completed assessment
+        hasAssessment = true;
+        
+        // Remove banner if it exists
+        const banner = document.getElementById('assessmentBanner');
+        if (banner) {
+          banner.remove();
+        }
+        
         showNotification('Assessment completed! Analyzing your personality profile...', 'success');
-        setTimeout(() => loadAssessment(), 2000);
+        
+        // Load assessment results and update UI
+        setTimeout(async () => {
+          await loadAssessment();
+          // Update welcome message for returning users
+          document.getElementById('welcomeMessage').textContent = `Welcome back, ${user.name}!`;
+          // Show personality summary in jobs tab
+          await showPersonalitySummary();
+        }, 2000);
       } catch (error) {
         showError('assessmentContainer', error.message);
       }
@@ -479,8 +560,113 @@
       }
     }
 
-    // Initialize - load jobs by default
-    loadJobs();
+    // Add assessment banner for users who haven't completed it
+    function showAssessmentBanner() {
+      if (hasAssessment) return;
+      
+      const header = document.querySelector('.dashboard-header');
+      if (!header) return;
+      
+      const banner = document.createElement('div');
+      banner.id = 'assessmentBanner';
+      banner.style.cssText = `
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      banner.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 24px;">🎯</span>
+          <div>
+            <strong style="display: block; margin-bottom: 4px;">Complete your personality assessment</strong>
+            <span style="opacity: 0.9; font-size: 14px;">Get matched with jobs that fit your unique strengths and preferences</span>
+          </div>
+        </div>
+        <button class="btn btn-secondary" style="background: white; color: var(--primary-color); border: none;" onclick="switchTab('assessment'); showAssessmentWelcome();">
+          Take Assessment
+        </button>
+      `;
+      
+      header.after(banner);
+    }
+    
+    // Update loadAssessment to handle both new and returning users
+    const originalLoadAssessment = loadAssessment;
+    loadAssessment = async function() {
+      if (!hasAssessment) {
+        showAssessmentWelcome();
+      } else {
+        await originalLoadAssessment();
+      }
+    };
+    
+    // Show personality summary widget in dashboard
+    async function showPersonalitySummary() {
+      if (!hasAssessment) return;
+      
+      try {
+        const response = await apiCall('/api/v1/assessment/results');
+        if (response && response.data && response.data.personality) {
+          const personality = response.data.personality;
+          const summaryEl = document.getElementById('personalitySummary');
+          if (summaryEl) {
+            summaryEl.style.display = 'block';
+            summaryEl.innerHTML = `
+              <div class="card" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 24px;">
+                <div style="padding: 24px;">
+                  <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                      <div style="opacity: 0.9; font-size: 14px; margin-bottom: 4px;">Your Personality Type</div>
+                      <h3 style="font-size: 24px; margin-bottom: 8px;">${personality.title || 'Personality Profile'}</h3>
+                      <p style="opacity: 0.9; font-size: 14px; line-height: 1.6;">${personality.detail ? personality.detail.substring(0, 150) + '...' : 'View your full profile in the Assessment tab'}</p>
+                    </div>
+                    <button class="btn btn-secondary" style="background: white; color: var(--primary-color); border: none; white-space: nowrap;" onclick="switchTab('assessment')">
+                      View Full Profile
+                    </button>
+                  </div>
+                  ${personality.recommendedJobs && personality.recommendedJobs.length > 0 ? `
+                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
+                      <div style="opacity: 0.9; font-size: 13px; margin-bottom: 8px;">Recommended Careers:</div>
+                      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        ${personality.recommendedJobs.slice(0, 5).map(job => `
+                          <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 16px; font-size: 13px;">${job}</span>
+                        `).join('')}
+                      </div>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }
+        }
+      } catch (error) {
+        console.log('Could not load personality summary:', error);
+      }
+    }
+    
+    // Initialize - check assessment status first, then load content
+    (async () => {
+      await checkAssessmentStatus();
+      
+      // Show banner if assessment not completed (unless we auto-switched to assessment tab)
+      if (!hasAssessment) {
+        showAssessmentBanner();
+      } else {
+        // Show personality summary for users who have completed assessment
+        await showPersonalitySummary();
+      }
+      
+      // Load jobs by default (unless we switched to assessment tab)
+      if (hasAssessment) {
+        loadJobs();
+      }
+    })();
   </script>
 </body>
 </html>
