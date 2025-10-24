@@ -65,6 +65,39 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - **Error Handling**: Comprehensive error handling distinguishing between network errors, 404s, and server-side issues.
 - **Deployment**: Configured for DigitalOcean App Platform with automated builds and deployments.
 
+## Migration Status
+
+### MongoDB Migration Progress: 17/30 Controllers (57%)
+
+**Phase 1 - Authentication (4 controllers):** ✅ Complete
+- signup.js, signin.js, forgotPassword.js, resetPassword.js
+
+**Phase 2 - User Management (3 controllers):** ✅ Complete  
+- getUser.js, updateUser.js, deleteUser.js
+
+**Phase 3 - Job Posting (4 controllers):** ✅ Complete
+- createPost.js, getPostsForCandidate.js, getPostById.js, getPostsForRecruiters.js
+- Implemented batch loading patterns to prevent N+1 queries
+- Complex nested relations converted to efficient Map-based lookups
+
+**Phase 4 - Matching & Likes (3 controllers):** ✅ Complete (Oct 24, 2025)
+- postLikes.js: Candidate likes/unlikes with 6 match state flows
+- likeCandidate.js: Recruiter likes with postId-based initiator detection
+- submitAssessment.js: Cleanup (removed 117 lines of dead Prisma code)
+- **Critical invariant:** matchCount only increments/decrements for accepted matches
+- **Match detection:** postId presence indicates candidate-initiated match
+- All flows architect-approved as production-ready
+
+**Remaining Phases:**
+- Comments, messages, notifications, and other features (~13 controllers)
+
+### Key Migration Patterns
+- Replace Prisma connect/is/select with direct ObjectId fields
+- Batch-load relations using Maps/Sets and Promise.all()
+- Serialize all responses with serializeDocument()
+- Use container.make() with exact model registry names (singular except 'postlikes')
+- Performance: Prevent N+1 queries via bulk $in queries with Map lookups
+
 ## External Dependencies
 
 - **Database**: MongoDB (Digital Ocean managed database).
