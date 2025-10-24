@@ -1,128 +1,107 @@
+import { ObjectId } from 'mongodb';
 import container from '../../container.js';
 import { getFormattedDate } from '../../services/helper.js';
+import { toObjectId, serializeDocument } from '../../utils/mongoHelpers.js';
 
 export default async function getMatchById(req, res, next) {
   const logger = container.make('logger');
   const match = container.make('models/match');
+  const user = container.make('models/user');
+  const post = container.make('models/post');
+  const company = container.make('models/company');
+  const personality = container.make('models/personality');
+  const matchMedia = container.make('models/matchmedia');
 
   try {
-    // Get document
-    const result = await match.findOne(
-      {
-        id: req.query.id,
-        accepted: true,
-      },
-      {
-        id: true,
-        candidate: {
-          select: {
-            id: true,
-            name: true,
-            photo: {
-              select: {
-                streamUrl: true,
-              },
-            },
-            personality: {
-              select: {
-                title: true,
-                detail: true,
-              },
-            },
-            matchMedia: {
-              select: {
-                id: true,
-                streamUrl: true,
-                category: true,
-              },
-            },
-          },
-        },
-        recruiter: {
-          select: {
-            id: true,
-            name: true,
-            photo: {
-              select: {
-                streamUrl: true,
-              },
-            },
-          },
-        },
-        accepted: true,
-        post: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            video: {
-              select: {
-                streamUrl: true,
-              },
-            },
-            thumbnail: {
-              select: {
-                streamUrl: true,
-              },
-            },
-            positionTitle: true,
-            positionType: true,
-            employmentType: true,
-            compensation: true,
-            company: {
-              select: {
-                id: true,
-                name: true,
-                logo: {
-                  select: {
-                    streamUrl: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    );
-    // Format results
-    if (result) {
-      result.media = result.candidate.matchMedia.map((media) => {
-        return {
-          id: media.id,
-          url: media.streamUrl,
-          category: media.category,
-        };
+    // Convert ID to ObjectId - check if query.id is actually the _id or if it's passed differently
+    const matchId = toObjectId(req.query.id);
+    
+    if (!matchId) {
+      return res.status(400).send({
+        message: 'Invalid match ID',
+        generatedAt: getFormattedDate(),
       });
-      if (result.candidate) {
-        result.candidate.matchMedia = undefined;
-        result.candidate.photo = result.candidate.photo
-          ? result.candidate.photo.streamUrl
-          : null;
-      }
-      if (result.recruiter) {
-        result.recruiter.photo = result.recruiter.photo
-          ? result.recruiter.photo.streamUrl
-          : null;
-      }
-      if (result.post?.company) {
-        result.company = result.post.company;
-        result.company.logo = result.company
-          ? result.company.logo.streamUrl
-          : null;
-        result.post.company = undefined;
-      }
-      result.thumbnail = result.post.thumbnail.streamUrl;
     }
+    
+    // Get match document (MongoDB native query)
+    const result = await match.findOne({
+      _id: matchId,
+      accepted: true,
+    });
+    
+    if (!result) {
+      return res.status(404).send({
+        message: 'Match not found',
+        generatedAt: getFormattedDate(),
+      });
+    }
+    
+    // Batch load all related data in parallel
+    const [candidate, recruiter, postData] = await Promise.all([
+      result.candidateId ? user.findById(result.candidateId, { _id: 1, name: 1, photo: 1, personalityKey: 1 }) : null,
+      result.recruiterId ? user.findById(result.recruiterId, { _id: 1, name: 1, photo: 1 }) : null,
+      result.postId ? post.findById(result.postId, { _id: 1, title: 1, description: 1, video: 1, thumbnail: 1, positionTitle: 1, positionType: 1, employmentType: 1, compensation: 1, companyId: 1 }) : null,
+    ]);
+    
+    // Load nested data (matchMedia, personality, company) in parallel
+    const [matchMediaItems, personalityData, companyData] = await Promise.all([
+      candidate ? matchMedia.findMany({ userId: candidate._id }, { _id: 1, streamUrl: 1, category: 1 }) : [],
+      candidate && candidate.personalityKey ? personality.findOne({ key: candidate.personalityKey }, { _id: 1, key: 1, title: 1, detail: 1 }) : null,
+      postData && postData.companyId ? company.findById(postData.companyId, { _id: 1, name: 1, logo: 1 }) : null,
+    ]);
+    
+    // Build formatted response
+    const formattedResult = {
+      id: result._id.toString(),
+      accepted: result.accepted,
+      candidate: candidate ? {
+        id: candidate._id.toString(),
+        name: candidate.name,
+        photo: candidate.photo?.streamUrl || null,
+        personality: personalityData ? {
+          title: personalityData.title,
+          detail: personalityData.detail,
+        } : null,
+      } : null,
+      recruiter: recruiter ? {
+        id: recruiter._id.toString(),
+        name: recruiter.name,
+        photo: recruiter.photo?.streamUrl || null,
+      } : null,
+      post: postData ? {
+        id: postData._id.toString(),
+        title: postData.title,
+        description: postData.description,
+        video: postData.video?.streamUrl || null,
+        thumbnail: postData.thumbnail?.streamUrl || null,
+        positionTitle: postData.positionTitle,
+        positionType: postData.positionType,
+        employmentType: postData.employmentType,
+        compensation: postData.compensation,
+      } : null,
+      company: companyData ? {
+        id: companyData._id.toString(),
+        name: companyData.name,
+        logo: companyData.logo?.streamUrl || null,
+      } : null,
+      media: matchMediaItems.map(media => ({
+        id: media._id.toString(),
+        url: media.streamUrl,
+        category: media.category,
+      })),
+      thumbnail: postData?.thumbnail?.streamUrl || null,
+    };
+    
     // send response
     return res.send({
-      data: result,
+      data: formattedResult,
       details: {
         body: req.query,
       },
       generatedAt: getFormattedDate(),
     });
   } catch (err) {
-    logger.error('Error occrred fetching match by ID. Reason:');
+    logger.error('Error occurred fetching match by ID. Reason:');
     logger.error(err.stack);
     next(new Error('Unable to complete request.'));
   }
