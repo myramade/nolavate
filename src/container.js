@@ -12,6 +12,8 @@ import PostViewsModel from './models/postviews.js';
 import NotificationModel from './models/notifications.js';
 import TranscriptionModel from './models/transcriptions.js';
 import JobSkillModel from './models/jobskill.js';
+import CommentModel from './models/comment.js';
+import SessionModel from './models/session.js';
 import ROLES from './config/roles.js';
 import { createUploadMiddleware } from './infrastructure/upload.service.js';
 
@@ -55,6 +57,8 @@ class Container {
     this.models.set('notification', new NotificationModel(this.db));
     this.models.set('transcription', new TranscriptionModel(this.db));
     this.models.set('jobskill', new JobSkillModel(this.db));
+    this.models.set('comment', new CommentModel(this.db));
+    this.models.set('session', new SessionModel(this.db));
     
     if (this.db) {
       console.log('Container initialized with MongoDB database connection');
