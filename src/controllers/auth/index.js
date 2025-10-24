@@ -4,11 +4,24 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { ObjectId } from 'mongodb';
 import container from '../../container.js';
-import validateRequest from '../../middleware/validateRequest.js';
 import { OAuth2Client } from 'google-auth-library';
 import appleSignin from 'apple-signin-auth';
 import { config } from '../../config/env.js';
 import { authRateLimiter, passwordResetRateLimiter } from '../../middleware/rateLimiter.js';
+import { 
+  validateSchema,
+  registerSchema,
+  loginSchema,
+  googleOAuthSchema,
+  appleOAuthSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema
+} from '../../utils/validation.js';
+import { requireObjectId } from '../../utils/safeObjectId.js';
+import { generateAccessToken, generateRefreshToken, generatePasswordResetToken } from '../../utils/tokenManager.js';
+import refreshToken from './refresh.js';
+import logout from './logout.js';
+import jwtAuth from '../../middleware/jwtAuth.js';
 
 const router = express.Router();
 
@@ -25,17 +38,9 @@ router.get('/config', (req, res) => {
 });
 
 // Register endpoint
-router.post('/register', authRateLimiter, validateRequest, async (req, res) => {
+router.post('/register', authRateLimiter, validateSchema(registerSchema), async (req, res) => {
   try {
-    const { email, password, name } = req.body;
-    
-    if (!email || !password || !name) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    if (password.length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters' });
-    }
+    const { email, password, name } = req.validatedBody;
 
     // Check if user already exists
     const existingUser = await container.make('models/user').findOne({ email });
@@ -59,22 +64,29 @@ router.post('/register', authRateLimiter, validateRequest, async (req, res) => {
       isVerified: false
     });
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        sub: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        roleSubtype: user.roleSubtype
-      },
-      config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
-    );
+    // Generate tokens
+    const accessToken = generateAccessToken({
+      sub: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      roleSubtype: user.roleSubtype
+    });
+
+    const refreshToken = generateRefreshToken();
+
+    // Create session
+    const sessionModel = container.make('models/session');
+    const deviceInfo = {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip
+    };
+    await sessionModel.createSession(user._id, refreshToken, deviceInfo);
 
     res.status(201).json({
       data: {
-        accessToken: token,
+        accessToken,
+        refreshToken,
         user: {
           id: user._id.toString(),
           email: user.email,
@@ -91,13 +103,9 @@ router.post('/register', authRateLimiter, validateRequest, async (req, res) => {
 });
 
 // Login endpoint
-router.post('/login', authRateLimiter, validateRequest, async (req, res) => {
+router.post('/login', authRateLimiter, validateSchema(loginSchema), async (req, res) => {
   try {
-    const { email, password } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password required' });
-    }
+    const { email, password } = req.validatedBody;
 
     // Find user
     const user = await container.make('models/user').findOne({ email });
@@ -111,22 +119,29 @@ router.post('/login', authRateLimiter, validateRequest, async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        sub: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        roleSubtype: user.roleSubtype
-      },
-      config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
-    );
+    // Generate tokens
+    const accessToken = generateAccessToken({
+      sub: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      roleSubtype: user.roleSubtype
+    });
+
+    const refreshTokenValue = generateRefreshToken();
+
+    // Create session
+    const sessionModel = container.make('models/session');
+    const deviceInfo = {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip
+    };
+    await sessionModel.createSession(user._id, refreshTokenValue, deviceInfo);
 
     res.json({
       data: {
-        accessToken: token,
+        accessToken,
+        refreshToken: refreshTokenValue,
         user: {
           id: user._id.toString(),
           email: user.email,
@@ -143,13 +158,9 @@ router.post('/login', authRateLimiter, validateRequest, async (req, res) => {
 });
 
 // Google OAuth Login
-router.post('/google', authRateLimiter, validateRequest, async (req, res) => {
+router.post('/google', authRateLimiter, validateSchema(googleOAuthSchema), async (req, res) => {
   try {
-    const { idToken, state, nonce } = req.body;
-    
-    if (!idToken) {
-      return res.status(400).json({ message: 'ID token required' });
-    }
+    const { idToken, state, nonce } = req.validatedBody;
 
     // Get Google Client ID from environment
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -209,22 +220,29 @@ router.post('/google', authRateLimiter, validateRequest, async (req, res) => {
       }
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        sub: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        roleSubtype: user.roleSubtype
-      },
-      config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
-    );
+    // Generate tokens
+    const accessToken = generateAccessToken({
+      sub: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      roleSubtype: user.roleSubtype
+    });
+
+    const refreshTokenValue = generateRefreshToken();
+
+    // Create session
+    const sessionModel = container.make('models/session');
+    const deviceInfo = {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip
+    };
+    await sessionModel.createSession(user._id, refreshTokenValue, deviceInfo);
 
     res.json({
       data: {
-        accessToken: token,
+        accessToken,
+        refreshToken: refreshTokenValue,
         user: {
           id: user._id.toString(),
           email: user.email,
@@ -242,13 +260,9 @@ router.post('/google', authRateLimiter, validateRequest, async (req, res) => {
 });
 
 // Apple Sign-In
-router.post('/apple', authRateLimiter, validateRequest, async (req, res) => {
+router.post('/apple', authRateLimiter, validateSchema(appleOAuthSchema), async (req, res) => {
   try {
-    const { idToken, code, nonce } = req.body;
-    
-    if (!idToken && !code) {
-      return res.status(400).json({ message: 'ID token or authorization code required' });
-    }
+    const { idToken, code, nonce } = req.validatedBody;
 
     // Get Apple credentials from environment
     const appleClientId = process.env.APPLE_CLIENT_ID;
@@ -311,22 +325,29 @@ router.post('/apple', authRateLimiter, validateRequest, async (req, res) => {
       }
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        sub: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        roleSubtype: user.roleSubtype
-      },
-      config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
-    );
+    // Generate tokens
+    const accessToken = generateAccessToken({
+      sub: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      roleSubtype: user.roleSubtype
+    });
+
+    const refreshTokenValue = generateRefreshToken();
+
+    // Create session
+    const sessionModel = container.make('models/session');
+    const deviceInfo = {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip
+    };
+    await sessionModel.createSession(user._id, refreshTokenValue, deviceInfo);
 
     res.json({
       data: {
-        accessToken: token,
+        accessToken,
+        refreshToken: refreshTokenValue,
         user: {
           id: user._id.toString(),
           email: user.email,
@@ -343,13 +364,9 @@ router.post('/apple', authRateLimiter, validateRequest, async (req, res) => {
 });
 
 // Forgot Password - Generate reset token
-router.post('/forgot-password', passwordResetRateLimiter, validateRequest, async (req, res) => {
+router.post('/forgot-password', passwordResetRateLimiter, validateSchema(forgotPasswordSchema), async (req, res) => {
   try {
-    const { email } = req.body;
-    
-    if (!email) {
-      return res.status(400).json({ message: 'Email is required' });
-    }
+    const { email } = req.validatedBody;
 
     // Find user
     const user = await container.make('models/user').findOne({ email });
@@ -363,15 +380,10 @@ router.post('/forgot-password', passwordResetRateLimiter, validateRequest, async
     }
 
     // Generate reset token
-    const resetToken = jwt.sign(
-      { 
-        sub: user._id.toString(),
-        email: user.email,
-        type: 'password_reset'
-      },
-      config.jwt.secret,
-      { expiresIn: '1h' }
-    );
+    const resetToken = generatePasswordResetToken({
+      sub: user._id.toString(),
+      email: user.email
+    });
 
     // Store reset token and expiry in user record
     await container.make('models/user').update(
@@ -408,18 +420,9 @@ router.post('/forgot-password', passwordResetRateLimiter, validateRequest, async
 });
 
 // Reset Password - Verify token and update password
-router.post('/reset-password', passwordResetRateLimiter, validateRequest, async (req, res) => {
+router.post('/reset-password', passwordResetRateLimiter, validateSchema(resetPasswordSchema), async (req, res) => {
   try {
-    const { token, password } = req.body;
-    
-    if (!token || !password) {
-      return res.status(400).json({ message: 'Token and password are required' });
-    }
-
-    // Validate password length
-    if (password.length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters' });
-    }
+    const { token, password } = req.validatedBody;
 
     // Verify token
     let decoded;
@@ -434,10 +437,9 @@ router.post('/reset-password', passwordResetRateLimiter, validateRequest, async 
       return res.status(401).json({ message: 'Invalid token type' });
     }
 
-    // Find user and verify token matches
-    const user = await container.make('models/user').findOne({ 
-      _id: new ObjectId(decoded.sub)
-    });
+    // Find user and verify token matches (with safe ObjectId conversion)
+    const userId = requireObjectId(decoded.sub, 'user ID');
+    const user = await container.make('models/user').findOne({ _id: userId });
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -470,6 +472,46 @@ router.post('/reset-password', passwordResetRateLimiter, validateRequest, async 
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ message: 'Failed to reset password' });
+  }
+});
+
+// Token refresh endpoint
+router.post('/refresh', authRateLimiter, refreshToken);
+
+// Logout endpoint
+router.post('/logout', logout);
+
+// Get active sessions endpoint
+router.get('/sessions', jwtAuth(container.make('roles').user), async (req, res) => {
+  try {
+    const sessionModel = container.make('models/session');
+    const sessions = await sessionModel.getUserActiveSessions(req.token.sub);
+    
+    res.json({
+      data: sessions.map(session => ({
+        id: session._id.toString(),
+        deviceInfo: session.deviceInfo,
+        createdAt: session.createdAt,
+        lastUsedAt: session.lastUsedAt,
+        expiresAt: session.expiresAt
+      }))
+    });
+  } catch (error) {
+    console.error('Get sessions error:', error);
+    res.status(500).json({ message: 'Failed to retrieve sessions' });
+  }
+});
+
+// Revoke all sessions endpoint (useful for "logout from all devices")
+router.post('/sessions/revoke-all', jwtAuth(container.make('roles').user), async (req, res) => {
+  try {
+    const sessionModel = container.make('models/session');
+    await sessionModel.revokeAllUserSessions(req.token.sub);
+    
+    res.json({ message: 'All sessions have been revoked' });
+  } catch (error) {
+    console.error('Revoke all sessions error:', error);
+    res.status(500).json({ message: 'Failed to revoke sessions' });
   }
 });
 

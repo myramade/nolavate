@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { safeObjectId } from '../utils/safeObjectId.js';
 
 // In-memory storage for when database is not available
 const memoryStorage = new Map();
@@ -57,10 +58,16 @@ export default class BaseModel {
 
   async findById(id, select = {}) {
     if (!this.db) return null;
-    // Ensure id is an ObjectId for MongoDB query
-    const objectId = (id instanceof ObjectId) ? id : new ObjectId(id);
+    
+    // Safe ObjectId conversion
+    const result = safeObjectId(id);
+    if (!result.success) {
+      console.error(`Invalid ID in findById: ${result.error}`);
+      return null;
+    }
+    
     return await this.db.collection(this.collection).findOne(
-      { _id: objectId },
+      { _id: result.value },
       { projection: select }
     );
   }
@@ -122,17 +129,44 @@ export default class BaseModel {
     return await query.toArray();
   }
 
-  async update(id, updateData) {
-    if (!this.db) return { ...updateData, _id: id };
-    // Ensure id is an ObjectId for MongoDB query
-    const objectId = (id instanceof ObjectId) ? id : new ObjectId(id);
+  async update(query, updateData) {
+    if (!this.db) return { ...updateData, _id: query };
+    
     try {
-      const result = await this.db.collection(this.collection).updateOne(
-        { _id: objectId },
+      // Handle both ID and query object for backward compatibility
+      let filter;
+      if (typeof query === 'string' || query instanceof ObjectId) {
+        // Simple ID - convert to ObjectId
+        const result = safeObjectId(query);
+        if (!result.success) {
+          console.error(`Invalid ID in update: ${result.error}`);
+          return null;
+        }
+        filter = { _id: result.value };
+      } else if (typeof query === 'object') {
+        // Query object - normalize _id field if present
+        filter = { ...query };
+        if (filter._id && typeof filter._id === 'string') {
+          const result = safeObjectId(filter._id);
+          if (!result.success) {
+            console.error(`Invalid _id in filter: ${result.error}`);
+            return null;
+          }
+          filter._id = result.value;
+        }
+      } else {
+        console.error(`Invalid query type in update: ${typeof query}`);
+        return null;
+      }
+      
+      const updateResult = await this.db.collection(this.collection).updateOne(
+        filter,
         { $set: updateData }
       );
-      if (result.modifiedCount > 0) {
-        return await this.findById(id);
+      
+      if (updateResult.modifiedCount > 0) {
+        // Return updated document
+        return await this.db.collection(this.collection).findOne(filter);
       }
       return null;
     } catch (error) {

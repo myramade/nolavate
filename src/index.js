@@ -1,10 +1,13 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import cors from 'cors';
 import container from './container.js';
 import { config } from './config/env.js';
 import { logger } from './config/logger.js';
 import { connectToMongoDB } from './services/mongodb.js';
+import { generalApiRateLimiter } from './middleware/rateLimiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +18,60 @@ const PORT = config.port;
 // Initialize MongoDB connection and container
 await connectToMongoDB();
 await container.initialize();
+
+// Trust proxy - needed for rate limiting behind reverse proxies (Replit, DigitalOcean, etc.)
+app.set('trust proxy', 1);
+
+// Security Middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+// CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = config.isDevelopment 
+      ? ['http://localhost:5000', 'http://127.0.0.1:5000']
+      : process.env.ALLOWED_ORIGINS?.split(',') || [];
+    
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+
+// General API rate limiting
+app.use('/api', generalApiRateLimiter);
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const requestId = Math.random().toString(36).substring(7);
+  req.requestId = requestId;
+  res.setHeader('X-Request-ID', requestId);
+  
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.info(`[${requestId}] ${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
+  });
+  
+  next();
+});
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));

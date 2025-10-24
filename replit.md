@@ -134,12 +134,34 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 5. **Rate Limiting**: 
    - Auth endpoints: 5 requests per 15 minutes
    - Password reset: 3 requests per hour
+   - General API: 100 requests per 15 minutes
    - Failed login protection with account lockout
 
 ### Security Middleware
 - `src/middleware/rateLimiter.js`: Rate limiting for auth and general API endpoints
 - `src/middleware/fileUploadValidation.js`: Comprehensive file upload validation
 - OAuth nonce/state validation in auth controllers
+- Helmet.js for security headers (CSP, XSS protection, etc.)
+- CORS with origin validation
+
+### Input Validation (October 24, 2025)
+- **Schema-based Validation**: Zod schemas for all auth endpoints (register, login, OAuth, password reset)
+- **Structured Error Messages**: Clear, field-level validation errors with 400 status codes
+- **Validation Middleware**: `validateSchema`, `validateQuery`, `validateParams` for comprehensive input sanitization
+- **Safe ObjectId Conversion**: All ObjectId conversions use `safeObjectId`/`requireObjectId` to prevent 500 errors on invalid IDs
+
+### Session Management (October 24, 2025)
+- **Refresh Token System**: Short-lived access tokens (15 minutes) + long-lived refresh tokens (7 days)
+- **Token Rotation**: Automatic refresh token rotation on token refresh for enhanced security
+- **Session Tracking**: Device info (user agent, IP) tracked for all sessions
+- **Session Revocation**: Individual session logout and "logout from all devices" functionality
+- **Database-backed Sessions**: Sessions stored in MongoDB for persistence and revocation support
+
+### New Endpoints (October 24, 2025)
+- `POST /api/v1/auth/refresh`: Refresh access token using refresh token
+- `POST /api/v1/auth/logout`: Logout and revoke refresh token
+- `GET /api/v1/auth/sessions`: Get all active sessions for current user
+- `POST /api/v1/auth/sessions/revoke-all`: Logout from all devices
 
 ## External Dependencies
 
