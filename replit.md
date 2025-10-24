@@ -43,8 +43,10 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 ### Technical Implementations
 - **Tech Stack**: Node.js 20.x with Express 5.x, MongoDB native driver.
 - **Authentication**: JWT-based authentication for secure token-based sessions, supporting email/password and role-based access control (CANDIDATE, RECRUITER), including secure password reset.
+  - **Security Hardening (Oct 24, 2025)**: JWT secret validation enforced at startup (minimum 32 characters), role escalation prevention (server-side role assignment only), OAuth nonce validation for CSRF protection, rate limiting on all auth endpoints.
 - **Static File Serving**: Express serves static HTML, CSS, and JS files for the frontend.
 - **File Uploads**: Secure profile photo and video uploads integrated with Supabase storage.
+  - **Security Hardening (Oct 24, 2025)**: Comprehensive file validation with MIME type whitelisting, extension validation, size limits (10MB resumes, 100MB media), and category validation.
 - **DISC Assessment System**: A 15-question personality assessment based on the DISC framework, featuring intelligent scoring and 10 personality profiles with tailored job recommendations.
 - **Job Posting**: Recruiters can create and import job postings with comprehensive details and skill management.
 - **Company Management**: Recruiters can view and create company profiles, with AI-powered lookup for company details.
@@ -60,10 +62,11 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 ### System Design Choices
 - **File Structure**: Organized with clear separation of concerns (`config/`, `controllers/`, `di/`, `infrastructure/`, `middleware/`, `models/`, `repositories/`, `services/`, `utils/`).
 - **Module System**: Standardized on ES modules.
-- **Configuration**: Centralized configuration management in `src/config/`.
+- **Configuration**: Centralized configuration management in `src/config/` with validation (JWT_SECRET required and minimum length enforced).
 - **Repository Pattern**: Implemented for data access layer using MongoDB models.
 - **Dependency Injection**: Utilizes a DI container for managing service dependencies.
 - **Error Handling**: Comprehensive error handling distinguishing between network errors, 404s, and server-side issues.
+- **Security Middleware**: Rate limiting (express-rate-limit), file upload validation, OAuth CSRF protection.
 - **Deployment**: Configured for DigitalOcean App Platform with automated builds and deployments.
 
 ## Migration Status
@@ -117,6 +120,27 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - Multi-level batching: Load dependent data in sequential Promise.all rounds
 - Per-entity sorting/limiting: Group first, sort within groups, then limit (e.g., comments per post)
 
+## Security Hardening (October 24, 2025)
+
+### Critical Fixes Implemented
+1. **JWT Secret Validation**: Removed hardcoded default "your-secret-key", enforced minimum 32-character length, server fails fast if JWT_SECRET is missing.
+2. **Role Escalation Prevention**: Removed client-supplied role/roleSubtype from registration and OAuth flows, all new users default to USER/CANDIDATE.
+3. **OAuth CSRF Protection**: Added nonce validation for Google and Apple OAuth flows to prevent CSRF and replay attacks.
+4. **File Upload Security**: 
+   - MIME type whitelisting (PDF/DOCX for resumes, MP4/WEBM for videos, JPEG/PNG for images)
+   - File extension validation
+   - Size limits enforced (10MB resumes, 100MB media)
+   - Category validation for media uploads (INFO, EDUCATION, EXPERIENCE, INTERESTS)
+5. **Rate Limiting**: 
+   - Auth endpoints: 5 requests per 15 minutes
+   - Password reset: 3 requests per hour
+   - Failed login protection with account lockout
+
+### Security Middleware
+- `src/middleware/rateLimiter.js`: Rate limiting for auth and general API endpoints
+- `src/middleware/fileUploadValidation.js`: Comprehensive file upload validation
+- OAuth nonce/state validation in auth controllers
+
 ## External Dependencies
 
 - **Database**: MongoDB (Digital Ocean managed database).
@@ -124,3 +148,4 @@ The API follows a layered architecture: `Routes → Controllers → Services →
 - **Hosting**: Digital Ocean App Platform.
 - **File Storage**: Supabase storage for profile photo and video uploads.
 - **Bot Protection**: Simple AI acknowledgement checkbox.
+- **Security**: express-rate-limit for API rate limiting.
